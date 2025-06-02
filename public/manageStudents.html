@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة الطلاب - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .filter-section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section select,
+    .filter-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 0.9rem;
+      color: #374151;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-section select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 0.5rem center;
+      background-size: 1rem;
+      padding-right: 2.5rem;
+    }
+
+    .filter-section select:hover,
+    .filter-section input:hover {
+      border-color: #1e3a8a;
+    }
+
+    .filter-section select:focus,
+    .filter-section input:focus {
+      outline: none;
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+    }
+
+    .reset-button {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .reset-button:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
+
+    .reset-button:active {
+      transform: translateY(0);
+    }
+
+    .flatpickr-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      display: block;
+      margin: 0 auto;
+      background-color: #f9fafb;
+    }
+
+    .swal2-input-centered {
+      display: block;
+      margin: 25px auto;
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار Derrالمدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="adminNav" class="space-y-2">
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="manage-user">👥 إدارة المستخدمين</span>
+            </a>
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="statistics">📈 الإحصائيات</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="dashboardTitle">إدارة الطلاب</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى إدارة الطلاب -->
+      <div id="adminContent">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">فلتر البحث</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <select id="filterAcademicYear" class="p-2 h-12 border rounded w-full" onchange="updateFilterSemesters()">
+              <option value="">أي</option>
+            </select>
+            <select id="filterSemester" class="p-2 h-12 border rounded w-full" onchange="updateFilterClasses()">
+              <option value="">أي</option>
+            </select>
+            <select id="filterClass" class="p-2 h-12 border rounded w-full" onchange="updateFilterSections()">
+              <option value="">أي</option>
+            </select>
+            <select id="filterSection" class="p-2 h-12 border rounded w-full" onchange="filterStudents()">
+              <option value="">أي</option>
+            </select>
+            <select id="searchColumn" class="p-2 h-12 border rounded w-full" onchange="updateSearchSuggestions()">
+              <option value="name">الاسم</option>
+              <option value="username">اسم المستخدم</option>
+              <option value="email">البريد الإلكتروني</option>
+              <option value="dataOfBirth">تاريخ الميلاد</option>
+              <option value="gender">الجنس</option>
+              <option value="phone">رقم الهاتف</option>
+            </select>
+            <div class="flex gap-2 col-span-1 md:col-span-2 lg:col-span-2">
+              <input id="searchText" class="p-2 h-12 border rounded w-full" list="searchSuggestions"
+                placeholder="ابحث هنا..." oninput="filterStudents()">
+              <datalist id="searchSuggestions"></datalist>
+              <button onclick="resetSearch()" class="reset-button h-12 w-60">إعادة تعيين</button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">قائمة الطلاب</h2>
+            <button onclick="addStudent()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+              إضافة طالب جديد
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">الاسم</th>
+                  <th class="p-3 text-gray-700">الصف</th>
+                  <th class="p-3 text-gray-700">الشعبة</th>
+                  <th class="p-3 text-gray-700">اسم المستخدم</th>
+                  <th class="p-3 text-gray-700">البريد الإلكتروني</th>
+                  <th class="p-3 text-gray-700">تاريخ الميلاد</th>
+                  <th class="p-3 text-gray-700">الجنس</th>
+                  <th class="p-3 text-gray-700">رقم الهاتف</th>
+                  <th class="p-3 text-gray-700">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="studentsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    let classes = [];
+    let sections = [];
+    let academicYears = [];
+    let semesters = [];
+    let allStudents = [];
+
+    // قائمة ثابتة لأسماء الصفوف من الأول إلى العاشر
+    const validClassNames = [
+      'الصف الأول', 'الصف الثاني', 'الصف الثالث', 'الصف الرابع', 'الصف الخامس', 'الصف السادس'
+    ];
+
+    // دالة لتنسيق التاريخ الميلادي إلى DD/MM/YYYY
+    function formatDate(dateString) {
+      if (!dateString) return '--';
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    async function fetchUserData() {
+      try {
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        setupDashboard(response.data);
+      } catch (error) {
+        handleAuthError(error);
+      }
+    }
+
+    async function fetchClasses() {
+      try {
+        const response = await axios.get('http://localhost:3000/classes', {
+          headers: { Authorization: `${token}` }
+        });
+        classes = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الصفوف', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSections() {
+      try {
+        const response = await axios.get('http://localhost:3000/sections', {
+          headers: { Authorization: `${token}` }
+        });
+        sections = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الشعب', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchAcademicYears() {
+      try {
+        const response = await axios.get('http://localhost:3000/academicYears', {
+          headers: { Authorization: `${token}` }
+        });
+        academicYears = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة السنوات الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSemesters() {
+      try {
+        const response = await axios.get('http://localhost:3000/semesters', {
+          headers: { Authorization: `${token}` }
+        });
+        semesters = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الفصول الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchStudents() {
+      try {
+        const response = await axios.get('http://localhost:3000/students', {
+          headers: { Authorization: `${token}` }
+        });
+        allStudents = response.data;
+        updateSearchSuggestions();
+        filterStudents();
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الطلاب', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      if (user.role !== 'super admin') {
+        Swal.fire({
+          icon: 'error',
+          title: 'غير مصرح',
+          text: 'هذه الصفحة للمشرفين فقط',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+        return;
+      }
+      Promise.all([fetchClasses(), fetchSections(), fetchAcademicYears(), fetchSemesters()]).then(() => {
+        setupFilters();
+        fetchStudents();
+      });
+    }
+
+    function loadStudents(students) {
+      const html = students.map(student => {
+        const sectionInfo = sections.find(s => s._id === student.sectionId) || { name: '--', classId: null };
+        const classInfo = classes.find(c => c._id === sectionInfo.classId) || { name: '--' };
+        return `
+          <tr class="border-b hover:bg-gray-50 transition-all">
+            <td class="p-3 text-gray-700">${student.name}</td>
+            <td class="p-3 text-gray-700">${classInfo.name}</td>
+            <td class="p-3 text-gray-700">${sectionInfo.name}</td>
+            <td class="p-3 text-gray-700">${student.username}</td>
+            <td class="p-3 text-gray-700">${student.email}</td>
+            <td class="p-3 text-gray-700">${formatDate(student.dataOfBirth)}</td>
+            <td class="p-3 text-gray-700">${student.gender || '--'}</td>
+            <td class="p-3 text-gray-700">${student.phone || '--'}</td>
+            <td class="p-3">
+              <button onclick="editStudent('${student._id}', '${student.name}', '${student.sectionId}', '${student.username}', '${student.email}', '${student.password}', '${student.dataOfBirth || ''}', '${student.gender || ''}', '${student.phone || ''}')" class="text-blue-500 hover:underline ml-2">تعديل</button>
+              <button onclick="deleteStudent('${student._id}')" class="text-red-500 hover:underline">حذف</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('studentsList').innerHTML = html;
+    }
+
+    async function addStudent() {
+      await Promise.all([fetchClasses(), fetchSections(), fetchAcademicYears(), fetchSemesters()]);
+
+      if (classes.length === 0 || sections.length === 0 || academicYears.length === 0 || semesters.length === 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ!',
+          text: 'لا يوجد بيانات كافية (صفوف، شعب، سنوات، أو فصول) لإضافة طالب',
+          confirmButtonColor: '#1e3a8a'
+        });
+        return;
+      }
+
+      const academicYearOptions = academicYears.map(y => `<option value="${y._id}">${y.year}</option>`).join('');
+      const classOptions = classes.filter(c => validClassNames.includes(c.name)).map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+
+      const { value: formValues } = await Swal.fire({
+        title: 'إضافة طالب جديد',
+        html: `
+          <input id="swal-input1" class="swal2-input swal2-input-centered" placeholder="الاسم">
+          <select id="swal-input2" class="swal2-input swal2-input-centered p-0" onchange="updateSemesterOptions(); updateClassOptions(); updateSectionOptions()">
+            <option value="">اختر السنة الدراسية</option>
+            ${academicYearOptions}
+          </select>
+          <select id="swal-input-semester" class="swal2-input swal2-input-centered p-0" onchange="updateClassOptions(); updateSectionOptions()" disabled>
+            <option value="">اختر الفصل</option>
+          </select>
+          <select id="swal-input3" class="swal2-input swal2-input-centered p-0" onchange="updateSectionOptions()" disabled>
+            <option value="">اختر الصف</option>
+            ${classOptions}
+          </select>
+          <select id="swal-input4" class="swal2-input swal2-input-centered p-0" disabled>
+            <option value="">اختر الشعبة</option>
+          </select>
+          <input id="swal-input5" class="swal2-input swal2-input-centered" placeholder="اسم المستخدم">
+          <input id="swal-input6" class="swal2-input swal2-input-centered" placeholder="البريد الإلكتروني">
+          <input id="swal-input7" class="swal2-input swal2-input-centered" placeholder="كلمة السر" type="password">
+          <input id="swal-input8" class="swal2-input flatpickr-input" placeholder="تاريخ الميلاد">
+          <select id="swal-input9" class="swal2-input swal2-input-centered p-0">
+            <option value="">اختر الجنس</option>
+            <option value="ذكر">ذكر</option>
+            <option value="أنثى">أنثى</option>
+          </select>
+          <input id="swal-input10" class="swal2-input swal2-input-centered" placeholder="رقم الهاتف" type="tel">
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'إضافة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        didOpen: () => {
+          updateSemesterOptions();
+          updateClassOptions();
+          updateSectionOptions();
+          flatpickr("#swal-input8", {
+            dateFormat: "Y-m-d",
+            locale: { firstDayOfWeek: 0 }
+          });
+        },
+        preConfirm: () => {
+          const name = document.getElementById('swal-input1').value;
+          const academicYearId = document.getElementById('swal-input2').value;
+          const semesterId = document.getElementById('swal-input-semester').value;
+          const classId = document.getElementById('swal-input3').value;
+          const sectionId = document.getElementById('swal-input4').value;
+          const username = document.getElementById('swal-input5').value;
+          const email = document.getElementById('swal-input6').value;
+          const password = document.getElementById('swal-input7').value;
+          const dataOfBirth = document.getElementById('swal-input8').value;
+          const gender = document.getElementById('swal-input9').value;
+          const phone = document.getElementById('swal-input10').value;
+          if (!name || !academicYearId || !semesterId || !classId || !sectionId || !username || !email || !password || !dataOfBirth || !gender || !phone) {
+            Swal.showValidationMessage('جميع الحقول مطلوبة');
+            return false;
+          }
+          return {
+            name,
+            sectionId,
+            academicYearId,
+            semesterId,
+            username,
+            email,
+            password,
+            dataOfBirth,
+            gender,
+            phone
+          };
+        }
+      });
+
+      if (formValues) {
+        try {
+          await axios.post('http://localhost:3000/students/create/', formValues, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({
+            icon: 'success',
+            title: 'تم',
+            text: 'تم إضافة الطالب بنجاح',
+            confirmButtonColor: '#1e3a8a'
+          });
+          fetchStudents();
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'فشل في إضافة الطالب',
+            confirmButtonColor: '#1e3a8a'
+          });
+        }
+      }
+    }
+
+    async function editStudent(id, name, sectionId, username, email, password, dataOfBirth, gender, phone) {
+      await Promise.all([fetchClasses(), fetchSections(), fetchAcademicYears(), fetchSemesters()]);
+
+      if (classes.length === 0 || sections.length === 0 || academicYears.length === 0 || semesters.length === 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ!',
+          text: 'لا يوجد بيانات كافية (صفوف، شعب، سنوات، أو فصول) لتعديل الطالب',
+          confirmButtonColor: '#1e3a8a'
+        });
+        return;
+      }
+
+      const currentSection = sections.find(s => s._id === sectionId);
+      const currentSemester = currentSection ? semesters.find(s => s._id === currentSection.semesterId) : null;
+      const currentAcademicYear = currentSemester ? academicYears.find(y => y._id === currentSemester.academicYearId) : null;
+
+      const academicYearOptions = academicYears.map(y => `<option value="${y._id}" ${currentAcademicYear && y._id === currentAcademicYear._id ? 'selected' : ''}>${y.year}</option>`).join('');
+      const classOptions = classes
+        .filter(c => validClassNames.includes(c.name))
+        .map(c => `<option value="${c._id}" ${currentSection && c._id === currentSection.classId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+      const { value: formValues } = await Swal.fire({
+        title: 'تعديل بيانات الطالب',
+        html: `
+          <input id="swal-input1" class="swal2-input swal2-input-centered" value="${name}" placeholder="الاسم">
+          <select id="swal-input2" class="swal2-input swal2-input-centered p-0" onchange="updateSemesterOptions(); updateClassOptions(); updateSectionOptions()">
+            <option value="">اختر السنة الدراسية</option>
+            ${academicYearOptions}
+          </select>
+          <select id="swal-input-semester" class="swal2-input swal2-input-centered p-0" onchange="updateClassOptions(); updateSectionOptions()" disabled>
+            <option value="">اختر الفصل</option>
+          </select>
+          <select id="swal-input3" class="swal2-input swal2-input-centered p-0" onchange="updateSectionOptions()" disabled>
+            <option value="">اختر الصف</option>
+            ${classOptions}
+          </select>
+          <select id="swal-input4" class="swal2-input swal2-input-centered p-0" disabled>
+            <option value="">اختر الشعبة</option>
+          </select>
+          <input id="swal-input5" class="swal2-input swal2-input-centered" value="${username}" placeholder="اسم المستخدم">
+          <input id="swal-input6" class="swal2-input swal2-input-centered" value="${email}" placeholder="البريد الإلكتروني">
+          <input id="swal-input7" class="swal2-input swal2-input-centered" value="${password}" placeholder="كلمة السر" type="password">
+          <input id="swal-input8" class="swal2-input flatpickr-input" value="${dataOfBirth || ''}" placeholder="تاريخ الميلاد">
+          <select id="swal-input9" class="swal2-input swal2-input-centered p-0">
+            <option value="" ${!gender ? 'selected' : ''}>اختر الجنس</option>
+            <option value="ذكر" ${gender === 'ذكر' ? 'selected' : ''}>ذكر</option>
+            <option value="أنثى" ${gender === 'أنثى' ? 'selected' : ''}>أنثى</option>
+          </select>
+          <input id="swal-input10" class="swal2-input swal2-input-centered" value="${phone || ''}" placeholder="رقم الهاتف" type="tel">
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        didOpen: () => {
+          updateSemesterOptions(currentSemester ? currentSemester._id : '');
+          updateClassOptions();
+          updateSectionOptions(sectionId);
+          flatpickr("#swal-input8", {
+            dateFormat: "Y-m-d",
+            defaultDate: dataOfBirth || null,
+            locale: { firstDayOfWeek: 0 }
+          });
+        },
+        preConfirm: () => {
+          const name = document.getElementById('swal-input1').value;
+          const academicYearId = document.getElementById('swal-input2').value;
+          const semesterId = document.getElementById('swal-input-semester').value;
+          const classId = document.getElementById('swal-input3').value;
+          const sectionId = document.getElementById('swal-input4').value;
+          const username = document.getElementById('swal-input5').value;
+          const email = document.getElementById('swal-input6').value;
+          const password = document.getElementById('swal-input7').value;
+          const dataOfBirth = document.getElementById('swal-input8').value;
+          const gender = document.getElementById('swal-input9').value;
+          const phone = document.getElementById('swal-input10').value;
+          if (!name || !academicYearId || !semesterId || !classId || !sectionId || !username || !email || !password || !dataOfBirth || !gender || !phone) {
+            Swal.showValidationMessage('جميع الحقول مطلوبة');
+            return false;
+          }
+          return {
+            name,
+            sectionId,
+            academicYearId,
+            semesterId,
+            username,
+            email,
+            password,
+            dataOfBirth,
+            gender,
+            phone,
+            role: 'student'
+          };
+        }
+      });
+
+      if (formValues) {
+        try {
+          await axios.put(`http://localhost:3000/students/update/${id}`, formValues, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({
+            icon: 'success',
+            title: 'تم',
+            text: 'تم تعديل بيانات الطالب بنجاح',
+            confirmButtonColor: '#1e3a8a'
+          });
+          fetchStudents();
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'فشل في تعديل بيانات الطالب',
+            confirmButtonColor: '#1e3a8a'
+          });
+        }
+      }
+    }
+
+    function updateSemesterOptions(selectedSemesterId = '') {
+      const academicYearId = document.getElementById('swal-input2').value;
+      const semesterSelect = document.getElementById('swal-input-semester');
+
+      if (!academicYearId) {
+        semesterSelect.disabled = true;
+        semesterSelect.innerHTML = '<option value="">اختر الفصل</option>';
+        updateClassOptions();
+        return;
+      }
+
+      const availableSemesters = semesters.filter(s => s.academicYearId.toString() === academicYearId);
+      if (availableSemesters.length === 0) {
+        semesterSelect.disabled = true;
+        semesterSelect.innerHTML = '<option value="">لا يوجد فصول متاحة</option>';
+      } else {
+        semesterSelect.disabled = false;
+        const semesterOptions = availableSemesters.map(s => `<option value="${s._id}" ${s._id === selectedSemesterId ? 'selected' : ''}>${s.name}</option>`).join('');
+        semesterSelect.innerHTML = `<option value="">اختر الفصل</option>${semesterOptions}`;
+      }
+      updateClassOptions();
+    }
+
+    function updateClassOptions() {
+      const academicYearId = document.getElementById('swal-input2').value;
+      const semesterId = document.getElementById('swal-input-semester').value;
+      const classSelect = document.getElementById('swal-input3');
+
+      if (!academicYearId || !semesterId) {
+        classSelect.disabled = true;
+        classSelect.innerHTML = '<option value="">اختر الصف</option>';
+        updateSectionOptions();
+        return;
+      }
+
+      const availableClasses = classes.filter(cls => {
+        const sectionCount = sections.filter(s =>
+          s.classId.toString() === cls._id &&
+          s.semesterId.toString() === semesterId &&
+          s.academicYearId.toString() === academicYearId &&
+          validClassNames.includes(cls.name)
+        ).length;
+        return sectionCount > 0;
+      });
+
+      if (availableClasses.length === 0) {
+        classSelect.disabled = true;
+        classSelect.innerHTML = '<option value="">لا يوجد صفوف متاحة</option>';
+      } else {
+        classSelect.disabled = false;
+        const classOptions = availableClasses.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+        classSelect.innerHTML = `<option value="">اختر الصف</option>${classOptions}`;
+      }
+      updateSectionOptions();
+    }
+
+    function updateSectionOptions(selectedSectionId = '') {
+      const classId = document.getElementById('swal-input3').value;
+      const academicYearId = document.getElementById('swal-input2').value;
+      const semesterId = document.getElementById('swal-input-semester').value;
+      const sectionSelect = document.getElementById('swal-input4');
+
+      if (!classId || !academicYearId || !semesterId) {
+        sectionSelect.disabled = true;
+        sectionSelect.innerHTML = '<option value="">اختر الشعبة</option>';
+        return;
+      }
+
+      const availableSections = sections.filter(s =>
+        s.classId.toString() === classId &&
+        s.academicYearId.toString() === academicYearId &&
+        s.semesterId.toString() === semesterId
+      );
+
+      if (availableSections.length === 0) {
+        sectionSelect.disabled = true;
+        sectionSelect.innerHTML = '<option value="">لا يوجد شعب متاحة</option>';
+      } else {
+        sectionSelect.disabled = false;
+        const sectionOptions = availableSections.map(s => `<option value="${s._id}" ${s._id === selectedSectionId ? 'selected' : ''}>${s.name}</option>`).join('');
+        sectionSelect.innerHTML = `<option value="">اختر الشعبة</option>${sectionOptions}`;
+      }
+    }
+
+    async function deleteStudent(studentId) {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'تأكيد الحذف',
+        text: 'هل أنت متأكد من حذف هذا الطالب؟',
+        showCancelButton: true,
+        confirmButtonText: 'حذف',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a'
+      });
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`http://localhost:3000/students/delete/${studentId}`, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({
+            icon: 'success',
+            title: 'تم الحذف',
+            text: 'تم حذف الطالب بنجاح',
+            confirmButtonColor: '#1e3a8a'
+          });
+          fetchStudents();
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'فشل في حذف الطالب',
+            confirmButtonColor: '#1e3a8a'
+          });
+        }
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({
+          icon: 'error',
+          title: 'انتهت الجلسة',
+          text: 'يرجى تسجيل الدخول مرة أخرى',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => logout());
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'حدث خطأ في جلب البيانات',
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    document.getElementById("manage-user").addEventListener("click", () => {
+      window.location.href = "manager.html";
+    });
+
+    document.getElementById("statistics").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    // متغيرات لحفظ حالة الفلتر
+    let currentFilters = {
+      academicYear: null,
+      semesterName: null,
+      classId: null,
+      sectionName: null
+    };
+
+    async function setupFilters() {
+      await Promise.all([fetchAcademicYears(), fetchSemesters(), fetchClasses(), fetchSections()]);
+
+      // تعبئة سنوات الدراسة
+      const academicYearSelect = document.getElementById('filterAcademicYear');
+      academicYearSelect.innerHTML = '<option value="">أي</option>' +
+        academicYears.map(y => `<option value="${y._id}">${y.year}</option>`).join('');
+
+      // تعبئة الفصول الدراسية
+      const semesterSelect = document.getElementById('filterSemester');
+      const uniqueSemesters = [...new Set(semesters.map(s => s.name))];
+      semesterSelect.innerHTML = '<option value="">أي</option>' +
+        uniqueSemesters.map(name => `<option value="${name}">${name}</option>`).join('');
+
+      // تعبئة الصفوف (من الأول إلى العاشر فقط)
+      const classSelect = document.getElementById('filterClass');
+      const filteredClasses = classes.filter(c => validClassNames.includes(c.name));
+      classSelect.innerHTML = '<option value="">أي</option>' +
+        filteredClasses.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+
+      // تعبئة الشعب بأسماء فريدة
+      const sectionSelect = document.getElementById('filterSection');
+      const uniqueSectionNames = [...new Set(sections.map(s => s.name))];
+      sectionSelect.innerHTML = '<option value="">أي</option>' +
+        uniqueSectionNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    }
+
+    function updateFilterSemesters() {
+      const academicYearId = document.getElementById('filterAcademicYear').value;
+      const semesterSelect = document.getElementById('filterSemester');
+
+      // إذا تم اختيار "أي" أو لا يوجد اختيار، اعرض جميع الفصول الفريدة
+      const uniqueSemesters = [...new Set(semesters
+        .filter(s => !academicYearId || s.academicYearId.toString() === academicYearId)
+        .map(s => s.name))];
+
+      semesterSelect.disabled = false;
+      semesterSelect.innerHTML = '<option value="">أي</option>' +
+        uniqueSemesters.map(name => `<option value="${name}" ${name === currentFilters.semesterName ? 'selected' : ''}>${name}</option>`).join('');
+
+      currentFilters.academicYear = academicYearId || null;
+      updateFilterClasses();
+    }
+
+    function updateFilterClasses() {
+      const academicYearId = document.getElementById('filterAcademicYear').value;
+      const semesterName = document.getElementById('filterSemester').value;
+      const classSelect = document.getElementById('filterClass');
+
+      let relevantClasses = classes.filter(c => validClassNames.includes(c.name));
+      if (academicYearId && semesterName) {
+        const relevantSemesters = semesters.filter(s =>
+          s.name === semesterName &&
+          s.academicYearId.toString() === academicYearId
+        );
+        relevantClasses = relevantClasses.filter(c =>
+          sections.some(s =>
+            relevantSemesters.some(sem => sem._id === s.semesterId) &&
+            s.classId === c._id
+          )
+        );
+      } else if (academicYearId) {
+        relevantClasses = relevantClasses.filter(c =>
+          sections.some(s =>
+            semesters.some(sem =>
+              sem.academicYearId.toString() === academicYearId &&
+              sem._id === s.semesterId &&
+              s.classId === c._id
+            )
+          )
+        );
+      } else if (semesterName) {
+        relevantClasses = relevantClasses.filter(c =>
+          sections.some(s =>
+            semesters.some(sem =>
+              sem.name === semesterName &&
+              sem._id === s.semesterId &&
+              s.classId === c._id
+            )
+          )
+        );
+      }
+
+      classSelect.disabled = false;
+      classSelect.innerHTML = '<option value="">أي</option>' +
+        relevantClasses.map(c => `<option value="${c._id}" ${c._id === currentFilters.classId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+      currentFilters.semesterName = semesterName || null;
+      updateFilterSections();
+    }
+
+    function updateFilterSections() {
+      const academicYearId = document.getElementById('filterAcademicYear').value;
+      const semesterName = document.getElementById('filterSemester').value;
+      const classId = document.getElementById('filterClass').value;
+      const sectionSelect = document.getElementById('filterSection');
+
+      let relevantSections = sections;
+      if (classId) {
+        relevantSections = relevantSections.filter(s => s.classId.toString() === classId);
+      }
+      if (semesterName) {
+        relevantSections = relevantSections.filter(s =>
+          semesters.some(sem =>
+            sem._id.toString() === s.semesterId.toString() &&
+            sem.name === semesterName
+          )
+        );
+      }
+      if (academicYearId) {
+        relevantSections = relevantSections.filter(s =>
+          semesters.some(sem =>
+            sem._id.toString() === s.semesterId.toString() &&
+            sem.academicYearId.toString() === academicYearId
+          )
+        );
+      }
+
+      // استخراج أسماء الشعب الفريدة
+      const uniqueSectionNames = [...new Set(relevantSections.map(s => s.name))];
+
+      sectionSelect.disabled = false;
+      sectionSelect.innerHTML = '<option value="">أي</option>' +
+        uniqueSectionNames.map(name => `<option value="${name}" ${name === currentFilters.sectionName ? 'selected' : ''}>${name}</option>`).join('');
+
+      currentFilters.classId = classId || null;
+      currentFilters.sectionName = document.getElementById('filterSection').value || null;
+      filterStudents();
+    }
+
+    function updateSearchSuggestions() {
+      const searchColumn = document.getElementById('searchColumn').value;
+      const datalist = document.getElementById('searchSuggestions');
+      let suggestions = [];
+
+      if (searchColumn === 'name') {
+        suggestions = [...new Set(allStudents.map(student => student.name))];
+      } else if (searchColumn === 'username') {
+        suggestions = [...new Set(allStudents.map(student => student.username))];
+      } else if (searchColumn === 'email') {
+        suggestions = [...new Set(allStudents.map(student => student.email))];
+      } else if (searchColumn === 'dataOfBirth') {
+        suggestions = [...new Set(allStudents.map(student => formatDate(student.dataOfBirth)).filter(date => date !== '--'))];
+      } else if (searchColumn === 'gender') {
+        suggestions = ['ذكر', 'أنثى'];
+      } else if (searchColumn === 'phone') {
+        suggestions = [...new Set(allStudents.map(student => student.phone).filter(phone => phone))];
+      }
+
+      datalist.innerHTML = suggestions.map(suggestion => `
+        <option value="${suggestion}">
+      `).join('');
+    }
+
+    function filterStudents() {
+      const sectionName = document.getElementById('filterSection').value;
+      const searchColumn = document.getElementById('searchColumn').value;
+      const searchText = document.getElementById('searchText').value.toLowerCase();
+      currentFilters.sectionName = sectionName || null;
+
+      const filtered = allStudents.filter(student => {
+        const section = sections.find(s => s._id === student.sectionId);
+        if (!section) return false;
+
+        const semester = semesters.find(sem => sem._id === section.semesterId);
+        if (!semester) return false;
+
+        // التحقق من فلاتر السنة الدراسية، الفصل، الصف، والشعبة
+        const matchesFilters = (
+          (!currentFilters.academicYear || semester.academicYearId.toString() === currentFilters.academicYear.toString()) &&
+          (!currentFilters.semesterName || semester.name === currentFilters.semesterName) &&
+          (!currentFilters.classId || section.classId.toString() === currentFilters.classId.toString()) &&
+          (!currentFilters.sectionName || section.name === currentFilters.sectionName)
+        );
+
+        // التحقق من فلتر البحث النصي
+        let matchesSearch = true;
+        if (searchText) {
+          if (searchColumn === 'name') {
+            matchesSearch = student.name.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'username') {
+            matchesSearch = student.username.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'email') {
+            matchesSearch = student.email.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'dataOfBirth') {
+            const formattedDate = formatDate(student.dataOfBirth).toLowerCase();
+            matchesSearch = formattedDate.includes(searchText);
+          } else if (searchColumn === 'gender') {
+            matchesSearch = student.gender && student.gender.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'phone') {
+            matchesSearch = student.phone && student.phone.toLowerCase().includes(searchText);
+          }
+        }
+
+        return matchesFilters && matchesSearch;
+      });
+
+      loadStudents(filtered);
+    }
+
+    function resetSearch() {
+      document.getElementById('filterAcademicYear').value = '';
+      document.getElementById('filterSemester').value = '';
+      document.getElementById('filterClass').value = '';
+      document.getElementById('filterSection').value = '';
+      document.getElementById('searchColumn').value = 'name';
+      document.getElementById('searchText').value = '';
+      currentFilters = {
+        academicYear: null,
+        semesterName: null,
+        classId: null,
+        sectionName: null
+      };
+      filterStudents();
+    }
+
+    fetchUserData();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>إضافة واجب - المعلم</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar fixed top-0 right-0">
+    <div class="p-4">
+      <div class="text-center mb-8">
+        <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2" alt="شعار المدرسة" />
+        <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+      </div>
+      <nav>
+        <div id="teacherNav" class="space-y-2">
+          <a href="dashboard.html"
+            class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+            <span>📊</span> لوحة المعلم
+          </a>
+          <a href="grade-teacher.html"
+            class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+            <span>📝</span> العلامات
+          </a>
+          <a href="teacherAssignments.html"
+            class="px-4 py-3 text-white bg-blue-700 flex items-center gap-2 transition-all">
+            <span>📚</span> الواجبات
+          </a>
+          <a href="teacherAttendance.html"
+            class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+            <span>📅</span> الحضور والغياب
+          </a>
+          <a href="teacherProfile.html"
+            class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+            <span>👤</span> ملف المعلم
+          </a>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="flex-1 mr-[250px] p-8">
+    <header class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-2xl font-bold">إدارة الواجبات</h1>
+        <p class="text-gray-600 p-4" id="welcomeMessage">مرحباً بك!</p>
+      </div>
+      <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+        تسجيل الخروج
+      </button>
+    </header>
+
+    <div class="bg-white p-6 rounded-xl shadow-lg">
+      <form id="assignmentForm" class="space-y-4">
+        <div>
+          <label class="block font-bold">اختر الشعبة:</label>
+          <select id="sectionSelect" class="w-full border p-2 rounded" required></select>
+        </div>
+        <div>
+          <label class="block font-bold">اختر المادة:</label>
+          <select id="subjectSelect" class="w-full border p-2 rounded" required></select>
+        </div>
+        <div>
+          <label class="block font-bold">عنوان الواجب:</label>
+          <input type="text" id="title" class="w-full border p-2 rounded" required />
+        </div>
+        <div>
+          <label class="block font-bold">وصف الواجب:</label>
+          <textarea id="description" class="w-full border p-2 rounded"></textarea>
+        </div>
+        <div>
+          <label class="block font-bold">تاريخ التسليم:</label>
+          <input type="date" id="dueDate" class="w-full border p-2 rounded" required />
+        </div>
+        <div>
+          <label class="block font-bold">العلامة القصوى:</label>
+          <input type="number" id="maxPoints" class="w-full border p-2 rounded" required />
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">إضافة</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "login.html";
+
+    let teacherData = []; // Store teacher data globally for filtering
+
+    async function loadTeacherData() {
+      try {
+        const res = await axios.get("http://localhost:3000/teacherSubjectSections/mine/mine", {
+          headers: { Authorization: token }
+        });
+
+        teacherData = res.data; // Store data for filtering
+        const sectionSelect = document.getElementById("sectionSelect");
+        const subjectSelect = document.getElementById("subjectSelect");
+
+        // Clear previous options
+        sectionSelect.innerHTML = '<option value="" disabled selected>اختر الشعبة</option>';
+        subjectSelect.innerHTML = '<option value="" disabled selected>اختر المادة</option>';
+
+        // Set لتتبع الشعب المضافة لتجنب التكرار
+        const addedSections = new Set();
+
+        for (const item of teacherData) {
+          // إضافة الشعبة
+          if (!addedSections.has(item.sectionId._id)) {
+            const sectionOption = document.createElement("option");
+            sectionOption.value = item.sectionId._id;
+            const classRes = await axios.get(`http://localhost:3000/classes/${item.sectionId.classId}`, {
+              headers: { Authorization: token }
+            });
+            sectionOption.textContent = `${classRes.data.name} - ${item.sectionId.name}`;
+            sectionSelect.appendChild(sectionOption);
+            addedSections.add(item.sectionId._id);
+          }
+        }
+
+        // Load subjects for the initially selected section (if any)
+        if (sectionSelect.value) {
+          filterSubjects(sectionSelect.value);
+        }
+      } catch (err) {
+        console.error("خطأ في جلب الشعب:", err);
+        Swal.fire("خطأ", "فشل في تحميل البيانات", "error");
+      }
+    }
+
+    async function filterSubjects(sectionId) {
+      const subjectSelect = document.getElementById("subjectSelect");
+      subjectSelect.innerHTML = '<option value="" disabled selected>اختر المادة</option>'; // Reset subject dropdown
+
+      // Filter subjects based on selected section
+      const addedSubjects = new Set();
+      for (const item of teacherData) {
+        if (item.sectionId._id === sectionId && !addedSubjects.has(item.subjectId._id)) {
+          const subjectOption = document.createElement("option");
+          subjectOption.value = item.subjectId._id;
+          subjectOption.textContent = item.subjectId.name;
+          subjectSelect.appendChild(subjectOption);
+          addedSubjects.add(item.subjectId._id);
+        }
+      }
+    }
+
+    // Listen for section selection change
+    document.getElementById("sectionSelect").addEventListener("change", function () {
+      filterSubjects(this.value);
+    });
+
+    document.getElementById("assignmentForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const assignmentData = {
+        sectionId: document.getElementById("sectionSelect").value,
+        subjectId: document.getElementById("subjectSelect").value,
+        title: document.getElementById("title").value,
+        description: document.getElementById("description").value,
+        dueDate: document.getElementById("dueDate").value,
+        maxPoints: parseInt(document.getElementById("maxPoints").value)
+      };
+
+      try {
+        const teacherRes = await axios.get("http://localhost:3000/teacher/me/", {
+          headers: { Authorization: token }
+        });
+        assignmentData.teacherId = teacherRes.data._id;
+
+        await axios.post("http://localhost:3000/assignments/create", assignmentData, {
+          headers: { Authorization: token }
+        });
+
+        Swal.fire("تم", "تمت إضافة الواجب بنجاح", "success");
+        document.getElementById("assignmentForm").reset();
+        // Reset subject dropdown after form submission
+        document.getElementById("subjectSelect").innerHTML = '<option value="" disabled selected>اختر المادة</option>';
+      } catch (error) {
+        console.error("فشل في إضافة الواجب:", error);
+        Swal.fire("خطأ", "فشل في إضافة الواجب", "error");
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+
+    loadTeacherData();
+  </script>
+</body>
+
+</html>

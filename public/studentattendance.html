@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>الغيابات - الطالب</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="studentNav" class="space-y-2">
+            <a href="dashboard.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📊</span> لوحة الطالب
+            </a>
+            <a href="studentsubjects.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📚</span> المواد الدراسية
+            </a>
+            <a href="studentassignments.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📝</span> الواجبات
+            </a>
+            <a href="studentschedule.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📅</span> الجدول الدراسي
+            </a>
+            <a href="studentattendance.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 bg-blue-800 flex items-center gap-2 transition-all">
+              <span>✅</span> الحضور والغياب
+            </a>
+            <a href="studentgrades.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>🏆</span> العلامات
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold">سجل الغيابات</h1>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg">تسجيل الخروج</button>
+      </header>
+
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <h2 class="text-xl font-bold mb-4">الغيابات</h2>
+        <div id="absenceList" class="space-y-4"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "login.html";
+
+    async function fetchAttendance() {
+      try {
+        const userRes = await axios.get("http://localhost:3000/dashboard", {
+          headers: { Authorization: token }
+        });
+        const user = userRes.data;
+        if (user.role !== "student") {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'هذه الصفحة مخصصة للطلاب فقط' });
+          return;
+        }
+
+        const studentRes = await axios.get("http://localhost:3000/students/me/me", {
+          headers: { Authorization: token }
+        });
+        const student = studentRes.data;
+        if (!student) throw new Error("لم يتم العثور على بيانات الطالب");
+
+        const attendanceRes = await axios.get("http://localhost:3000/attendances", {
+          headers: { Authorization: token }
+        });
+
+        const absences = attendanceRes.data.filter(a => {
+          return a.studentId?.toString() === student._id.toString() && !a.present;
+        });
+
+        const html = absences.map(item => `
+          <div class="bg-gray-100 p-4 rounded-lg shadow">
+            <p><strong>التاريخ:</strong> ${new Date(item.date).toLocaleDateString('ar-EG')}</p>
+          </div>
+        `).join("");
+
+        document.getElementById("absenceList").innerHTML = html || "<p class='text-gray-600'>لا يوجد غيابات مسجلة.</p>";
+
+      } catch (error) {
+        console.error("فشل في جلب الغيابات:", error);
+        Swal.fire({ icon: "error", title: "خطأ", text: "فشل في تحميل الغيابات." });
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+
+    fetchAttendance();
+  </script>
+</body>
+
+</html>

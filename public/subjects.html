@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة المواد - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .filter-section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 0.9rem;
+      color: #374151;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-section input:hover {
+      border-color: #1e3a8a;
+    }
+
+    .filter-section input:focus {
+      outline: none;
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+    }
+
+    .reset-button {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .reset-button:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
+
+    .reset-button:active {
+      transform: translateY(0);
+    }
+
+    .swal2-input-centered {
+      display: block;
+      margin: 25px auto;
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    table tbody tr {
+      transition: background-color 0.2s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2" alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="adminNav" class="space-y-2">
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="manage-user">👥 إدارة المستخدمين</span>
+            </a>
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="statistics">📈 الإحصائيات</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="dashboardTitle">إدارة المواد</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى إدارة المواد -->
+      <div id="adminContent">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">فلتر البحث</h2>
+          <div class="flex gap-4">
+            <input id="searchText" class="p-2 border rounded h-12 w-80" placeholder="ابحث باسم المادة..." oninput="filterSubjects()">
+            <button onclick="resetSearch()" class="reset-button h-12 p-2 min-w-28">إعادة تعيين</button>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">قائمة المواد</h2>
+            <div class="flex gap-2">
+              <button onclick="addSubject()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
+                إضافة مادة
+              </button>
+              <button onclick="addAllSubjects()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all">
+                إضافة جميع المواد
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">اسم المادة</th>
+                  <th class="p-3 text-gray-700">تاريخ الإنشاء</th>
+                  <th class="p-3 text-gray-700">تاريخ التحديث</th>
+                  <th class="p-3 text-gray-700">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="subjectsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    let allSubjects = [];
+    const subjectOptions = [
+      "العلوم", "الرياضيات", "العربي", "الانجليزي", "الرياضة", "الفن",
+      "المهني", "التربية الاسلامية", "اجتماعيات", "جغرافيا", "وطنية", "تاريخ"
+    ];
+
+    async function fetchUserData() {
+      try {
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        setupDashboard(response.data);
+      } catch (error) {
+        handleAuthError(error);
+      }
+    }
+
+    async function fetchSubjects() {
+      try {
+        const response = await axios.get('http://localhost:3000/subjects', {
+          headers: { Authorization: `${token}` }
+        });
+        allSubjects = response.data;
+        filterSubjects();
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة المواد', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      if (user.role !== 'super admin') {
+        Swal.fire({
+          icon: 'error',
+          title: 'غير مصرح',
+          text: 'هذه الصفحة للمشرفين فقط',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+        return;
+      }
+      fetchSubjects();
+    }
+
+    function loadSubjects(subjects) {
+      const html = subjects.map(subject => `
+        <tr class="border-b">
+          <td class="p-3 text-gray-700">${subject.name}</td>
+          <td class="p-3 text-gray-700">${new Date(subject.createdAt).toLocaleDateString('en-GB')}</td>
+          <td class="p-3 text-gray-700">${new Date(subject.updatedAt).toLocaleDateString('en-GB')}</td>
+          <td class="p-3">
+            <button onclick="editSubject('${subject._id}', '${subject.name}')" class="text-blue-500 hover:underline ml-2">تعديل</button>
+            <button onclick="deleteSubject('${subject._id}')" class="text-red-500 hover:underline">حذف</button>
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('subjectsList').innerHTML = html;
+    }
+
+    async function addSubject() {
+      const availableOptions = subjectOptions.filter(option => !allSubjects.some(subject => subject.name === option));
+      if (availableOptions.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'تحذير', text: 'تمت إضافة جميع المواد المتاحة', confirmButtonColor: '#1e3a8a' });
+        return;
+      }
+
+      const { value: name } = await Swal.fire({
+        title: 'إضافة مادة جديدة',
+        html: `
+          <select id="swal-name" class="swal2-input swal2-input-centered p-0 h-12">
+            <option value="" disabled selected>اختر اسم المادة</option>
+            ${availableOptions.map(option => `<option value="${option}">${option}</option>`).join('')}
+          </select>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'إضافة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        preConfirm: () => {
+          const selectedName = document.getElementById('swal-name').value;
+          if (!selectedName) {
+            Swal.showValidationMessage('يرجى اختيار اسم المادة');
+            return false;
+          }
+          return selectedName;
+        }
+      });
+
+      if (name) {
+        try {
+          await axios.post('http://localhost:3000/subjects/create', { name }, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({ icon: 'success', title: 'تم', text: 'تم إضافة المادة بنجاح', confirmButtonColor: '#1e3a8a' });
+          fetchSubjects();
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في إضافة المادة', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    async function addAllSubjects() {
+      const availableOptions = subjectOptions.filter(option => !allSubjects.some(subject => subject.name === option));
+      if (availableOptions.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'تحذير', text: 'تمت إضافة جميع المواد المتاحة', confirmButtonColor: '#1e3a8a' });
+        return;
+      }
+
+      const result = await Swal.fire({
+        icon: 'question',
+        title: 'تأكيد الإضافة',
+        text: `هل أنت متأكد من إضافة ${availableOptions.length} مادة؟`,
+        showCancelButton: true,
+        confirmButtonText: 'إضافة الكل',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          for (const name of availableOptions) {
+            await axios.post('http://localhost:3000/subjects/create', { name }, {
+              headers: { Authorization: `${token}` }
+            });
+          }
+          Swal.fire({ icon: 'success', title: 'تم', text: 'تم إضافة جميع المواد بنجاح', confirmButtonColor: '#1e3a8a' });
+          fetchSubjects();
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في إضافة بعض المواد', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    async function editSubject(id, currentName) {
+      const availableOptions = subjectOptions.filter(option => option === currentName || !allSubjects.some(subject => subject.name === option && subject._id !== id));
+      const { value: name } = await Swal.fire({
+        title: 'تعديل المادة',
+        html: `
+          <select id="swal-name" class="swal2-input swal2-input-centered p-0 h-12">
+            <option value="" disabled>اختر اسم المادة</option>
+            ${availableOptions.map(option => `<option value="${option}" ${option === currentName ? 'selected' : ''}>${option}</option>`).join('')}
+          </select>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'تحديث',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        preConfirm: () => {
+          const selectedName = document.getElementById('swal-name').value;
+          if (!selectedName) {
+            Swal.showValidationMessage('يرجى اختيار اسم المادة');
+            return false;
+          }
+          return selectedName;
+        }
+      });
+
+      if (name) {
+        try {
+          await axios.put(`http://localhost:3000/subjects/update/${id}`, { name }, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({ icon: 'success', title: 'تم', text: 'تم تحديث المادة بنجاح', confirmButtonColor: '#1e3a8a' });
+          fetchSubjects();
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في تحديث المادة', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    async function deleteSubject(id) {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'تأكيد الحذف',
+        text: 'هل أنت متأكد من حذف هذه المادة؟',
+        showCancelButton: true,
+        confirmButtonText: 'حذف',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`http://localhost:3000/subjects/delete/${id}`, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({ icon: 'success', title: 'تم', text: 'تم حذف المادة بنجاح', confirmButtonColor: '#1e3a8a' });
+          fetchSubjects();
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في حذف المادة', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    function filterSubjects() {
+      const searchText = document.getElementById('searchText').value.toLowerCase();
+      const filtered = allSubjects.filter(subject => 
+        subject.name.toLowerCase().includes(searchText)
+      );
+      loadSubjects(filtered);
+    }
+
+    function resetSearch() {
+      document.getElementById('searchText').value = '';
+      filterSubjects();
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({
+          icon: 'error',
+          title: 'انتهت الجلسة',
+          text: 'يرجى تسجيل الدخول مرة أخرى',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => logout());
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'حدث خطأ في جلب البيانات',
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    document.getElementById("manage-user").addEventListener("click", () => {
+      window.location.href = "manager.html";
+    });
+
+    document.getElementById("statistics").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    fetchUserData();
+  </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>الواجبات - الطالب</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="studentNav" class="space-y-2">
+            <a href="dashboard.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📊</span> لوحة الطالب
+            </a>
+            <a href="studentsubjects.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📚</span> المواد الدراسية
+            </a>
+            <a href="studentassignments.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📝</span> الواجبات
+            </a>
+            <a href="studentschedule.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📅</span> الجدول الدراسي
+            </a>
+            <a href="studentattendance.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>✅</span> الحضور والغياب
+            </a>
+            <a href="studentgrades.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>🏆</span> العلامات
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold">الواجبات الدراسية للطالب</h1>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg">تسجيل الخروج</button>
+      </header>
+
+      <div id="assignmentsContainer" class="space-y-6"></div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "login.html";
+
+    async function fetchAssignments() {
+      try {
+        const studentRes = await axios.get("http://localhost:3000/students/me/me", {
+          headers: { Authorization: token }
+        });
+        const student = studentRes.data;
+
+        const assignmentsRes = await axios.get("http://localhost:3000/assignments", {
+          headers: { Authorization: token }
+        });
+
+        const assignments = assignmentsRes.data.filter(a => a.sectionId === student.sectionId);
+
+        const html = assignments.map(item => `
+          <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h3 class="text-xl font-bold mb-2">${item.title}</h3>
+            <p class="mb-2"><strong>الوصف:</strong> ${item.description || "لا يوجد"}</p>
+            <p class="mb-2"><strong>آخر موعد:</strong> ${new Date(item.dueDate).toLocaleDateString('ar-EG')}</p>
+
+            <form onsubmit="submitAssignment(event, '${item._id}')" enctype="multipart/form-data">
+              <input type="file" name="answer" required class="mb-2" />
+              <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg">تسليم الواجب</button>
+            </form>
+          </div>
+        `).join("");
+
+        document.getElementById("assignmentsContainer").innerHTML = html || "<p class='text-gray-600'>لا توجد واجبات حالياً.</p>";
+      } catch (err) {
+        console.error("فشل في تحميل الواجبات:", err);
+        Swal.fire({ icon: "error", title: "خطأ", text: "فشل في تحميل الواجبات." });
+      }
+    }
+
+    async function submitAssignment(event, assignmentId) {
+      event.preventDefault();
+      const token = localStorage.getItem("token");
+
+      const form = event.target;
+      const fileInput = form.querySelector("input[type='file']");
+
+      if (!fileInput || fileInput.files.length === 0) {
+        Swal.fire({ icon: "error", title: "خطأ", text: "يرجى اختيار ملف." });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("assignmentId", assignmentId);
+
+      try {
+        await axios.post("http://localhost:3000/submissions/submit", formData, {
+          headers: {
+            Authorization: token,
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        Swal.fire({ icon: "success", title: "تم تسليم الواجب" });
+      } catch (err) {
+        console.error("فشل في تسليم الواجب:", err);
+        Swal.fire({ icon: "error", title: "خطأ", text: "فشل في تسليم الواجب." });
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+
+    fetchAssignments();
+  </script>
+</body>
+
+</html>

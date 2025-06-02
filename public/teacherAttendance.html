@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الحضور والغياب - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background-color: #1e3a8a;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
+    }
+
+    .sticky {
+      position: sticky;
+      right: 0;
+      background-color: #fff;
+      z-index: 10;
+    }
+
+    main {
+      margin-right: 250px;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    #attendanceSection {
+      position: relative;
+      z-index: 1;
+    }
+
+    .week-card {
+      cursor: pointer;
+      background-color: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .week-card:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .week-card.active {
+      background-color: #1e3a8a;
+      color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .week-card.current {
+      border: 2px solid #22c55e;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="teacherNav" class="space-y-2">
+            <a href="dashboard.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📊</span> لوحة المعلم
+            </a>
+            <a href="grade-teacher.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📝</span> العلامات
+            </a>
+            <a href="teacherAssignments.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📚</span> الواجبات
+            </a>
+            <a href="teacherAttendance.html"
+              class="px-4 py-3 text-white bg-blue-700 flex items-center gap-2 transition-all">
+              <span>📅</span> الحضور والغياب
+            </a>
+            <a href="teacherProfile.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>👤</span> ملف المعلم
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">الحضور والغياب</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى الحضور والغياب -->
+      <div id="teacherContent">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+          <h2 class="text-xl font-bold mb-4">الشعبة المسؤول عنها</h2>
+          <div id="sectionInfo"></div>
+        </div>
+
+        <div id="attendanceSection" class="bg-white p-6 rounded-xl shadow-lg hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">سجل الحضور والغياب</h2>
+            <select id="monthSelector" class="border rounded-lg p-2" onchange="loadAttendanceData()">
+              <option value="">اختر الشهر</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6" id="weeksList"></div>
+          <div class="overflow-x-auto">
+            <div id="attendanceTable"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    let selectedWeekIndex = -1;
+    let currentWeekIndex = -1;
+
+    async function fetchUserData() {
+      try {
+        Swal.fire({
+          title: 'جاري التحميل...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        Swal.close();
+        setupDashboard(response.data);
+      } catch (error) {
+        Swal.close();
+        handleAuthError(error);
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      loadTeacherSection(user);
+    }
+
+    async function loadTeacherSection(user) {
+      try {
+        Swal.fire({
+          title: 'جاري تحميل بيانات الشعبة...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+        const teacherRes = await axios.get('http://localhost:3000/teachers', {
+          headers: { Authorization: token }
+        });
+
+        const teacher = teacherRes.data.find(t => t._id === user.userId || t.userId?._id === user.userId);
+        if (!teacher) {
+          throw new Error('تعذر العثور على بيانات المعلم');
+        }
+
+        const sectionsRes = await axios.get('http://localhost:3000/sections', {
+          headers: { Authorization: token }
+        });
+
+
+        const mySection = sectionsRes.data.find(section => {
+          const teacherId = section.teacherId?._id ? section.teacherId._id.toString() : section.teacherId?.toString();
+          return teacherId === teacher._id.toString();
+        });
+
+        const sectionInfo = document.getElementById('sectionInfo');
+        if (!mySection) {
+          sectionInfo.innerHTML = `
+            <p class="text-gray-600">لم يتم تعيينك كمسؤول عن أي شعبة. يرجى التحقق من إعدادات الشعبة في قاعدة البيانات أو التواصل مع الإدارة.</p>
+          `;
+          Swal.close();
+          return;
+        }
+
+        const classRes = await axios.get(`http://localhost:3000/classes/${mySection.classId}`, {
+          headers: { Authorization: token }
+        });
+
+
+        sectionInfo.innerHTML = `
+          <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h3 class="font-bold text-lg mb-2">🧾 الشعبة: ${mySection.name}</h3>
+            <p class="text-gray-600">الصف: ${classRes.data.name}</p>
+          </div>
+        `;
+
+        localStorage.setItem('selectedSectionId', mySection._id);
+        document.getElementById('attendanceSection').classList.remove('hidden');
+        await loadAcademicYears();
+        await loadAttendanceData();
+        Swal.close();
+      } catch (err) {
+        Swal.close();
+        console.error('فشل تحميل بيانات المعلم:', err);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: `فشل في تحميل بيانات الشعبة: ${err.message}` });
+      }
+    }
+
+    async function loadAcademicYears() {
+      try {
+        Swal.fire({
+          title: 'جاري تحميل السنوات الدراسية...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+        const response = await axios.get('http://localhost:3000/academicYears', {
+          headers: { Authorization: token }
+        });
+        Swal.close();
+        const monthSelector = document.getElementById('monthSelector');
+        monthSelector.innerHTML = '<option value="">اختر الشهر</option>';
+
+        const months = [
+          'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+          'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+
+        response.data.forEach(year => {
+          for (let i = 7; i <= 11; i++) {
+            monthSelector.innerHTML += `<option value="${year._id},${year.year},${i + 1}">${months[i]} - ${year.year}</option>`;
+          }
+          for (let i = 0; i <= 6; i++) {
+            monthSelector.innerHTML += `<option value="${year._id},${year.year},${i + 1}">${months[i]} - ${year.year}</option>`;
+          }
+        });
+
+        if (monthSelector.innerHTML === '<option value="">اختر الشهر</option>') {
+          monthSelector.innerHTML += '<option disabled>لا توجد سنوات دراسية متاحة</option>';
+        }
+      } catch (err) {
+        Swal.close();
+        console.error('فشل تحميل السنوات الدراسية:', err);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في تحميل السنوات الدراسية.' });
+      }
+    }
+
+    async function loadAttendanceData() {
+      try {
+        Swal.fire({
+          title: 'جاري تحميل بيانات الحضور...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+        const sectionId = localStorage.getItem('selectedSectionId');
+        const monthSelector = document.getElementById('monthSelector');
+        const selectedValue = monthSelector.value;
+        if (!selectedValue) {
+          document.getElementById('weeksList').innerHTML = '';
+          document.getElementById('attendanceTable').innerHTML = '<p class="text-gray-600">يرجى اختيار شهر لعرض سجل الحضور.</p>';
+          Swal.close();
+          return;
+        }
+
+        const [academicYearId, year, month] = selectedValue.split(',');
+        const yearRange = year.split('-').map(Number);
+        const monthIndex = parseInt(month) - 1;
+        const isFirstHalf = monthIndex >= 7;
+        const selectedYear = isFirstHalf ? yearRange[0] : yearRange[1];
+        const daysInMonth = new Date(selectedYear, monthIndex + 1, 0).getDate();
+
+        // Calculate weeks
+        const weeks = [];
+        let currentWeek = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+          const date = new Date(Date.UTC(selectedYear, monthIndex, day));
+          currentWeek.push({ day, date });
+
+          if (date.getUTCDay() === 6 || day === daysInMonth) {
+            weeks.push(currentWeek);
+            currentWeek = [];
+          }
+        }
+
+        // Determine current week
+        const today = new Date();
+        currentWeekIndex = weeks.findIndex(week => {
+          return week.some(({ date }) => {
+            return (
+              date.getUTCFullYear() === today.getUTCFullYear() &&
+              date.getUTCMonth() === today.getUTCMonth() &&
+              date.getUTCDate() === today.getUTCDate()
+            );
+          });
+        });
+
+        // Default to first week if none selected
+        if (selectedWeekIndex === -1 && weeks.length > 0) {
+          selectedWeekIndex = currentWeekIndex !== -1 ? currentWeekIndex : 0;
+        }
+
+        // Render week cards
+        const weeksList = document.getElementById('weeksList');
+        weeksList.innerHTML = weeks.map((week, index) => {
+          const startDate = week[0].date.toLocaleDateString('ar-EG', { timeZone: 'UTC' });
+          const endDate = week[week.length - 1].date.toLocaleDateString('ar-EG', { timeZone: 'UTC' });
+          const isActive = index === selectedWeekIndex ? 'active' : '';
+          const isCurrent = index === currentWeekIndex ? 'current' : '';
+          return `
+            <div class="week-card ${isActive} ${isCurrent}" onclick="selectWeek(${index})">
+              <h3 class="font-bold">الأسبوع ${index + 1}</h3>
+              <p class="text-sm">من ${startDate} إلى ${endDate}</p>
+            </div>
+          `;
+        }).join('');
+
+        // Fetch students in the section
+        const studentsRes = await axios.get(`http://localhost:3000/students`, {
+          headers: { Authorization: token },
+          params: { sectionId }
+        });
+        const sectionStudents = studentsRes.data.filter(student => student.sectionId === sectionId);
+
+        if (sectionStudents.length === 0) {
+          document.getElementById('attendanceTable').innerHTML = '<p class="text-gray-600">لا يوجد طلاب في هذه الشعبة.</p>';
+          Swal.close();
+          return;
+        }
+
+        // Fetch attendance records for the selected month
+        const attendanceRes = await axios.get(`http://localhost:3000/attendances`, {
+          headers: { Authorization: token, 'Cache-Control': 'no-cache' },
+          params: { sectionId, month: monthIndex, year: selectedYear }
+        });
+        const attendanceRecords = attendanceRes.data;
+
+        // Render attendance table for selected week
+        await renderWeekAttendance(weeks, sectionStudents, attendanceRecords);
+        Swal.close();
+      } catch (err) {
+        Swal.close();
+        console.error('فشل تحميل بيانات الحضور:', err);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في تحميل بيانات الحضور.' });
+      }
+    }
+
+    async function selectWeek(index) {
+      selectedWeekIndex = index;
+      await loadAttendanceData();
+    }
+
+    async function renderWeekAttendance(weeks, sectionStudents, attendanceRecords) {
+      if (selectedWeekIndex < 0 || selectedWeekIndex >= weeks.length) {
+        document.getElementById('attendanceTable').innerHTML = '<p class="text-gray-600">يرجى اختيار أسبوع لعرض التفاصيل.</p>';
+        return;
+      }
+
+      const week = weeks[selectedWeekIndex];
+      const attendanceTable = document.getElementById('attendanceTable');
+      let tableHTML = `
+        <div class="mb-8">
+          <h3 class="text-lg font-bold mb-4">الأسبوع ${selectedWeekIndex + 1}</h3>
+          <table class="mb-6">
+            <thead>
+              <tr>
+                <th>اسم الطالب</th>
+                ${week.map(({ day, date }) => {
+        const dayName = date.toLocaleDateString('ar-EG', { weekday: 'short', timeZone: 'UTC' });
+        const dateStr = date.toISOString().split('T')[0];
+        return `<th>${dayName}<br>${date.toLocaleDateString('ar-EG', { timeZone: 'UTC' })}</th>`;
+      }).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${sectionStudents.map(student => `
+                <tr>
+                  <td class="sticky">${student.name}</td>
+                  ${week.map(({ day, date }) => {
+        const dateStr = date.toISOString().split('T')[0];
+        const record = attendanceRecords.find(a => {
+          const studentIdFromRecord = a.studentId && a.studentId._id ? a.studentId._id.toString() : a.studentId ? a.studentId.toString() : '';
+          return studentIdFromRecord === student._id.toString() && new Date(a.date).toISOString().split('T')[0] === dateStr;
+        });
+        const status = record ? record.status.trim() : '';
+        return `
+                      <td>
+                        <select onchange="updateAttendance('${student._id}', '${dateStr}', this.value)">
+                          <option value="">${status || 'غير مسجل'}</option>
+                          <option value="حاضر" ${status === 'حاضر' ? 'selected' : ''}>حاضر</option>
+                          <option value="غائب" ${status === 'غائب' ? 'selected' : ''}>غائب</option>
+                          <option value="متأخر" ${status === 'متأخر' ? 'selected' : ''}>متأخر</option>
+                          <option value="معذور" ${status === 'معذور' ? 'selected' : ''}>معذور</option>
+                        </select>
+                      </td>
+                    `;
+      }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      attendanceTable.innerHTML = tableHTML || '<p class="text-gray-600">لا توجد بيانات حضور لهذا الأسبوع.</p>';
+    }
+
+    async function updateAttendance(studentId, date, status) {
+      if (!status) return;
+      try {
+        Swal.fire({
+          title: 'جاري تحديث الحضور...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        const existingRecordRes = await axios.get(`http://localhost:3000/attendances`, {
+          headers: { Authorization: token, 'Cache-Control': 'no-cache' },
+          params: { studentId, date }
+        });
+
+        const existingRecord = existingRecordRes.data.find(
+          record => {
+            const studentIdFromRecord = record.studentId && record.studentId._id ? record.studentId._id.toString() : record.studentId ? record.studentId.toString() : '';
+            return studentIdFromRecord === studentId && new Date(record.date).toISOString().split('T')[0] === date;
+          }
+        );
+
+        let response;
+        if (existingRecord) {
+          response = await axios.put(`http://localhost:3000/attendances/${existingRecord._id}`,
+            { status, date },
+            { headers: { Authorization: token, 'Cache-Control': 'no-cache' } }
+          );
+        } else {
+          response = await axios.post('http://localhost:3000/attendances/create',
+            { studentId, date, status },
+            { headers: { Authorization: token, 'Cache-Control': 'no-cache' } }
+          );
+        }
+
+        Swal.fire({ icon: 'success', title: 'تم', text: 'تم تحديث حالة الحضور بنجاح.' });
+        await loadAttendanceData();
+      } catch (err) {
+        console.error('فشل تحديث الحضور:', err);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: `فشل في تحديث حالة الحضور: ${err.message}` });
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({ icon: 'error', title: 'انتهت الجلسة', text: 'يرجى تسجيل الدخول مرة أخرى' }).then(() => logout());
+      } else {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'حدث خطأ في جلب البيانات' });
+      }
+    }
+
+    fetchUserData();
+  </script>
+</body>
+
+</html>

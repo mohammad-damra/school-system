@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ربط المواد بالشعب - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .filter-section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section select,
+    .filter-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 0.9rem;
+      color: #374151;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-section select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 0.5rem center;
+      background-size: 1rem;
+      padding-right: 2.5rem;
+    }
+
+    .filter-section select:hover,
+    .filter-section input:hover {
+      border-color: #1e3a8a;
+    }
+
+    .filter-section select:focus,
+    .filter-section input:focus {
+      outline: none;
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+    }
+
+    .reset-button {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .reset-button:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
+
+    .reset-button:active {
+      transform: translateY(0);
+    }
+
+    .swal2-input-centered {
+      display: block;
+      margin: 25px auto;
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    table tbody tr {
+      transition: background-color 0.2s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2" alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="adminNav" class="space-y-2">
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="manage-user">👥 إدارة المستخدمين</span>
+            </a>
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="statistics">📈 الإحصائيات</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="dashboardTitle">ربط المواد بالشعب</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى ربط المواد بالشعب -->
+      <div id="adminContent">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">فلتر البحث</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <select id="searchColumn" class="p-2 border rounded h-12" onchange="updateSearchSuggestions()">
+              <option value="sectionName">اسم الشعبة</option>
+              <option value="className">اسم الصف</option>
+              <option value="subjectName">اسم المادة</option>
+            </select>
+            <div class="flex gap-2 w-80">
+              <input id="searchText" class="p-2 border rounded h-12" list="searchSuggestions" placeholder="ابحث هنا..." oninput="filterAssignments()">
+              <datalist id="searchSuggestions"></datalist>
+              <button onclick="resetSearch()" class="reset-button h-12 p-2 min-w-28">إعادة تعيين</button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">قائمة الربط بين المواد والشعب</h2>
+            <div class="flex gap-2">
+              <button onclick="assignSubjectToSection()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
+                ربط مادة بشعبة
+              </button>
+              <button onclick="assignAllSubjectsToSection()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all">
+                ربط جميع المواد
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">اسم الشعبة</th>
+                  <th class="p-3 text-gray-700">اسم الصف</th>
+                  <th class="p-3 text-gray-700">السنة الدراسية</th>
+                  <th class="p-3 text-gray-700">الفصل الدراسي</th>
+                  <th class="p-3 text-gray-700">اسم المادة</th>
+                  <th class="p-3 text-gray-700">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="assignmentsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    let allAssignments = [];
+    let allSections = [];
+    let allSubjects = [];
+    let allAcademicYears = [];
+    let allSemesters = [];
+    let allClasses = [];
+
+    async function fetchUserData() {
+      try {
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        setupDashboard(response.data);
+      } catch (error) {
+        handleAuthError(error);
+      }
+    }
+
+    async function fetchSections() {
+      try {
+        const response = await axios.get('http://localhost:3000/sections', {
+          headers: { Authorization: `${token}` }
+        });
+        allSections = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الشعب', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSubjects() {
+      try {
+        const response = await axios.get('http://localhost:3000/subjects', {
+          headers: { Authorization: `${token}` }
+        });
+        allSubjects = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة المواد', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchAcademicYears() {
+      try {
+        const response = await axios.get('http://localhost:3000/academicYears', {
+          headers: { Authorization: `${token}` }
+        });
+        allAcademicYears = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة السنوات الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSemesters() {
+      try {
+        const response = await axios.get('http://localhost:3000/semesters', {
+          headers: { Authorization: `${token}` }
+        });
+        allSemesters = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الفصول الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchClasses() {
+      try {
+        const response = await axios.get('http://localhost:3000/classes', {
+          headers: { Authorization: `${token}` }
+        });
+        allClasses = response.data;
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الصفوف', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchAssignments() {
+      try {
+        await Promise.all([
+          fetchSections(),
+          fetchSubjects(),
+          fetchAcademicYears(),
+          fetchSemesters(),
+          fetchClasses()
+        ]);
+
+        // Build assignments from sections' subjectIds
+        allAssignments = [];
+        allSections.forEach(section => {
+          section.subjectIds.forEach(subjectId => {
+            const subject = allSubjects.find(s => s._id === subjectId.toString());
+            if (subject) {
+              allAssignments.push({
+                sectionId: section._id,
+                sectionName: section.name,
+                classId: section.classId,
+                academicYearId: section.academicYearId,
+                semesterId: section.semesterId,
+                subjectId: subject._id,
+                subjectName: subject.name
+              });
+            }
+          });
+        });
+
+        updateSearchSuggestions();
+        filterAssignments();
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الربط', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      if (user.role !== 'super admin') {
+        Swal.fire({
+          icon: 'error',
+          title: 'غير مصرح',
+          text: 'هذه الصفحة للمشرفين فقط',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+        return;
+      }
+      fetchAssignments();
+    }
+
+    function loadAssignments(assignments) {
+      const html = assignments.map(assignment => {
+        const section = allSections.find(s => s._id === assignment.sectionId);
+        const className = allClasses.find(c => c._id === (section?.classId?._id || section?.classId))?.name || '--';
+        const academicYearName = allAcademicYears.find(ay => ay._id === (section?.academicYearId?._id || section?.academicYearId))?.year || '--';
+        const semesterName = allSemesters.find(s => s._id === (section?.semesterId?._id || section?.semesterId))?.name || '--';
+        return `
+          <tr class="border-b">
+            <td class="p-3 text-gray-700">${assignment.sectionName}</td>
+            <td class="p-3 text-gray-700">${className}</td>
+            <td class="p-3 text-gray-700">${academicYearName}</td>
+            <td class="p-3 text-gray-700">${semesterName}</td>
+            <td class="p-3 text-gray-700">${assignment.subjectName}</td>
+            <td class="p-3">
+              <button onclick="removeAssignment('${assignment.sectionId}', '${assignment.subjectId}')" class="text-red-500 hover:underline">إزالة</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('assignmentsList').innerHTML = html;
+    }
+
+    async function assignSubjectToSection() {
+      const { value: formValues } = await Swal.fire({
+        title: 'ربط مادة بشعبة',
+        html: `
+          <select id="swal-academicYear" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateSemesters()">
+            <option value="" disabled selected>اختر السنة الدراسية</option>
+            ${allAcademicYears.map(ay => `<option value="${ay._id}">${ay.year}</option>`).join('')}
+          </select>
+          <select id="swal-semester" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateClasses()" disabled>
+            <option value="" disabled selected>اختر الفصل الدراسي</option>
+          </select>
+          <select id="swal-class" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateSections()" disabled>
+            <option value="" disabled selected>اختر الصف</option>
+          </select>
+          <select id="swal-section" class="swal2-input swal2-input-centered p-0 h-12" disabled>
+            <option value="" disabled selected>اختر الشعبة</option>
+          </select>
+          <select id="swal-subject" class="swal2-input swal2-input-centered p-0 h-12">
+            <option value="" disabled selected>اختر المادة</option>
+            ${allSubjects.map(s => `<option value="${s._id}">${s.name}</option>`).join('')}
+          </select>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'ربط',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        didOpen: () => {
+          document.getElementById('swal-academicYear').addEventListener('change', updateSemesters);
+          document.getElementById('swal-semester').addEventListener('change', updateClasses);
+          document.getElementById('swal-class').addEventListener('change', updateSections);
+        },
+        preConfirm: () => {
+          const academicYearId = document.getElementById('swal-academicYear').value;
+          const semesterId = document.getElementById('swal-semester').value;
+          const classId = document.getElementById('swal-class').value;
+          const sectionId = document.getElementById('swal-section').value;
+          const subjectId = document.getElementById('swal-subject').value;
+
+          if (!academicYearId) {
+            Swal.showValidationMessage('يرجى اختيار سنة دراسية');
+            return false;
+          }
+          if (!semesterId) {
+            Swal.showValidationMessage('يرجى اختيار فصل دراسي');
+            return false;
+          }
+          if (!classId) {
+            Swal.showValidationMessage('يرجى اختيار صف');
+            return false;
+          }
+          if (!sectionId) {
+            Swal.showValidationMessage('يرجى اختيار شعبة');
+            return false;
+          }
+          if (!subjectId) {
+            Swal.showValidationMessage('يرجى اختيار مادة');
+            return false;
+          }
+
+          return { academicYearId, semesterId, classId, sectionId, subjectId };
+        }
+      });
+
+      if (formValues) {
+        const { sectionId, subjectId } = formValues;
+        try {
+          const section = allSections.find(s => s._id === sectionId);
+          if (!section.subjectIds.includes(subjectId)) {
+            section.subjectIds.push(subjectId);
+            await axios.put(`http://localhost:3000/sections/update/${sectionId}`, {
+              subjectIds: section.subjectIds
+            }, {
+              headers: { Authorization: `${token}` }
+            });
+            Swal.fire({ icon: 'success', title: 'تم', text: 'تم ربط المادة بالشعبة بنجاح', confirmButtonColor: '#1e3a8a' });
+            fetchAssignments();
+          } else {
+            Swal.fire({ icon: 'warning', title: 'تحذير', text: 'المادة مرتبطة بالفعل بهذه الشعبة', confirmButtonColor: '#1e3a8a' });
+          }
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في ربط المادة بالشعبة', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    async function assignAllSubjectsToSection() {
+      const { value: formValues } = await Swal.fire({
+        title: 'ربط جميع المواد بشعبة',
+        html: `
+          <select id="swal-academicYear" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateSemesters()">
+            <option value="" disabled selected>اختر السنة الدراسية</option>
+            ${allAcademicYears.map(ay => `<option value="${ay._id}">${ay.year}</option>`).join('')}
+          </select>
+          <select id="swal-semester" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateClasses()" disabled>
+            <option value="" disabled selected>اختر الفصل الدراسي</option>
+          </select>
+          <select id="swal-class" class="swal2-input swal2-input-centered p-0 h-12" onchange="updateSections()" disabled>
+            <option value="" disabled selected>اختر الصف</option>
+          </select>
+          <select id="swal-section" class="swal2-input swal2-input-centered p-0 h-12" disabled>
+            <option value="" disabled selected>اختر الشعبة</option>
+          </select>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'ربط الكل',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a',
+        didOpen: () => {
+          document.getElementById('swal-academicYear').addEventListener('change', updateSemesters);
+          document.getElementById('swal-semester').addEventListener('change', updateClasses);
+          document.getElementById('swal-class').addEventListener('change', updateSections);
+        },
+        preConfirm: () => {
+          const academicYearId = document.getElementById('swal-academicYear').value;
+          const semesterId = document.getElementById('swal-semester').value;
+          const classId = document.getElementById('swal-class').value;
+          const sectionId = document.getElementById('swal-section').value;
+
+          if (!academicYearId) {
+            Swal.showValidationMessage('يرجى اختيار سنة دراسية');
+            return false;
+          }
+          if (!semesterId) {
+            Swal.showValidationMessage('يرجى اختيار فصل دراسي');
+            return false;
+          }
+          if (!classId) {
+            Swal.showValidationMessage('يرجى اختيار صف');
+            return false;
+          }
+          if (!sectionId) {
+            Swal.showValidationMessage('يرجى اختيار شعبة');
+            return false;
+          }
+
+          return { academicYearId, semesterId, classId, sectionId };
+        }
+      });
+
+      if (formValues) {
+        const { sectionId, classId } = formValues;
+        try {
+          const section = allSections.find(s => s._id === sectionId);
+          const classObj = allClasses.find(c => c._id === classId);
+          const className = classObj ? classObj.name.toLowerCase() : '';
+
+          // Determine if the class is fifth or lower
+          const classLevels = ['أول', 'ثاني', 'ثالث', 'رابع', 'خامس'];
+          const isFifthOrLower = classLevels.some(level => className.includes(level));
+
+          // Filter subjects based on class level
+          let subjectsToAssign = allSubjects.filter(subject => !section.subjectIds.includes(subject._id));
+          if (isFifthOrLower) {
+            subjectsToAssign = subjectsToAssign.filter(subject => 
+              !['تاريخ', 'جغرافيا', 'وطنية'].includes(subject.name)
+            );
+          } else {
+            subjectsToAssign = subjectsToAssign.filter(subject => 
+              subject.name !== 'اجتماعيات'
+            );
+          }
+
+          if (subjectsToAssign.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'تحذير', text: 'لا توجد مواد متاحة للربط بهذه الشعبة', confirmButtonColor: '#1e3a8a' });
+            return;
+          }
+
+          const result = await Swal.fire({
+            icon: 'question',
+            title: 'تأكيد الربط',
+            text: `هل أنت متأكد من ربط ${subjectsToAssign.length} مادة بهذه الشعبة؟`,
+            showCancelButton: true,
+            confirmButtonText: 'ربط الكل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#1e3a8a'
+          });
+
+          if (result.isConfirmed) {
+            section.subjectIds.push(...subjectsToAssign.map(subject => subject._id));
+            await axios.put(`http://localhost:3000/sections/update/${sectionId}`, {
+              subjectIds: section.subjectIds
+            }, {
+              headers: { Authorization: `${token}` }
+            });
+            Swal.fire({ icon: 'success', title: 'تم', text: 'تم ربط جميع المواد المتاحة بنجاح', confirmButtonColor: '#1e3a8a' });
+            fetchAssignments();
+          }
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في ربط المواد بالشعبة', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    async function removeAssignment(sectionId, subjectId) {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'تأكيد الإزالة',
+        text: 'هل أنت متأكد من إزالة هذا الربط؟',
+        showCancelButton: true,
+        confirmButtonText: 'إزالة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#1e3a8a'
+      });
+      if (result.isConfirmed) {
+        try {
+          const section = allSections.find(s => s._id === sectionId);
+          section.subjectIds = section.subjectIds.filter(sid => sid.toString() !== subjectId);
+          await axios.put(`http://localhost:3000/sections/update/${sectionId}`, {
+            subjectIds: section.subjectIds
+          }, {
+            headers: { Authorization: `${token}` }
+          });
+          Swal.fire({ icon: 'success', title: 'تم', text: 'تم إزالة الربط بنجاح', confirmButtonColor: '#1e3a8a' });
+          fetchAssignments();
+        } catch (error) {
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في إزالة الربط', confirmButtonColor: '#1e3a8a' });
+        }
+      }
+    }
+
+    function updateSemesters() {
+      const academicYearId = document.getElementById('swal-academicYear').value;
+      const semesterSelect = document.getElementById('swal-semester');
+      const classSelect = document.getElementById('swal-class');
+      const sectionSelect = document.getElementById('swal-section');
+
+      // Reset downstream dropdowns
+      classSelect.innerHTML = '<option value="" disabled selected>اختر الصف</option>';
+      sectionSelect.innerHTML = '<option value="" disabled selected>اختر الشعبة</option>';
+      classSelect.disabled = true;
+      sectionSelect.disabled = true;
+
+      if (!academicYearId) {
+        semesterSelect.innerHTML = '<option value="" disabled selected>اختر الفصل الدراسي</option>';
+        semesterSelect.disabled = true;
+        return;
+      }
+
+      const filteredSemesters = allSemesters.filter(s => s.academicYearId.toString() === academicYearId);
+      semesterSelect.innerHTML = '<option value="" disabled selected>اختر الفصل الدراسي</option>' + 
+        filteredSemesters.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+      semesterSelect.disabled = filteredSemesters.length === 0;
+    }
+
+    function updateClasses() {
+      const academicYearId = document.getElementById('swal-academicYear').value;
+      const semesterId = document.getElementById('swal-semester').value;
+      const classSelect = document.getElementById('swal-class');
+      const sectionSelect = document.getElementById('swal-section');
+
+      // Reset downstream dropdown
+      sectionSelect.innerHTML = '<option value="" disabled selected>اختر الشعبة</option>';
+      sectionSelect.disabled = true;
+
+      if (!semesterId) {
+        classSelect.innerHTML = '<option value="" disabled selected>اختر الصف</option>';
+        classSelect.disabled = true;
+        return;
+      }
+
+      const filteredSections = allSections.filter(s => 
+        s.academicYearId.toString() === academicYearId && 
+        s.semesterId.toString() === semesterId
+      );
+      const filteredClasses = [...new Set(filteredSections.map(s => s.classId.toString()))].map(classId => 
+        allClasses.find(c => c._id === classId)
+      ).filter(c => c);
+
+      classSelect.innerHTML = '<option value="" disabled selected>اختر الصف</option>' + 
+        filteredClasses.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+      classSelect.disabled = filteredClasses.length === 0;
+    }
+
+    function updateSections() {
+      const academicYearId = document.getElementById('swal-academicYear').value;
+      const semesterId = document.getElementById('swal-semester').value;
+      const classId = document.getElementById('swal-class').value;
+      const sectionSelect = document.getElementById('swal-section');
+
+      if (!classId) {
+        sectionSelect.innerHTML = '<option value="" disabled selected>اختر الشعبة</option>';
+        sectionSelect.disabled = true;
+        return;
+      }
+
+      const filteredSections = allSections.filter(s => 
+        s.academicYearId.toString() === academicYearId && 
+        s.semesterId.toString() === semesterId && 
+        s.classId.toString() === classId
+      );
+
+      sectionSelect.innerHTML = '<option value="" disabled selected>اختر الشعبة</option>' + 
+        filteredSections.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+      sectionSelect.disabled = filteredSections.length === 0;
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({
+          icon: 'error',
+          title: 'انتهت الجلسة',
+          text: 'يرجى تسجيل الدخول مرة أخرى',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => logout());
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'حدث خطأ في جلب البيانات',
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    document.getElementById("manage-user").addEventListener("click", () => {
+      window.location.href = "manager.html";
+    });
+
+    document.getElementById("statistics").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    function updateSearchSuggestions() {
+      const searchColumn = document.getElementById('searchColumn').value;
+      const datalist = document.getElementById('searchSuggestions');
+      let suggestions = [];
+
+      if (searchColumn === 'sectionName') {
+        suggestions = [...new Set(allAssignments.map(a => a.sectionName))];
+      } else if (searchColumn === 'className') {
+        suggestions = [...new Set(allAssignments.map(a => allClasses.find(c => c._id === (allSections.find(s => s._id === a.sectionId)?.classId?._id || allSections.find(s => s._id === a.sectionId)?.classId))?.name).filter(name => name))];
+      } else if (searchColumn === 'subjectName') {
+        suggestions = [...new Set(allAssignments.map(a => a.subjectName))];
+      }
+
+      datalist.innerHTML = suggestions.map(suggestion => `
+        <option value="${suggestion}">
+      `).join('');
+    }
+
+    function filterAssignments() {
+      const searchColumn = document.getElementById('searchColumn').value;
+      const searchText = document.getElementById('searchText').value.toLowerCase();
+
+      const filtered = allAssignments.filter(assignment => {
+        let matchesSearch = true;
+        if (searchText) {
+          if (searchColumn === 'sectionName') {
+            matchesSearch = assignment.sectionName.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'className') {
+            const className = allClasses.find(c => c._id === (allSections.find(s => s._id === assignment.sectionId)?.classId?._id || allSections.find(s => s._id === assignment.sectionId)?.classId))?.name || '';
+            matchesSearch = className.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'subjectName') {
+            matchesSearch = assignment.subjectName.toLowerCase().includes(searchText);
+          }
+        }
+        return matchesSearch;
+      });
+
+      loadAssignments(filtered);
+    }
+
+    function resetSearch() {
+      document.getElementById('searchColumn').value = 'sectionName';
+      document.getElementById('searchText').value = '';
+      filterAssignments();
+    }
+
+    fetchUserData();
+  </script>
+</body>
+</html>

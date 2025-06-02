@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عرض المستخدمين - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .filter-section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section select,
+    .filter-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 0.9rem;
+      color: #374151;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-section select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 0.5rem center;
+      background-size: 1rem;
+      padding-right: 2.5rem;
+    }
+
+    .filter-section select:hover,
+    .filter-section input:hover {
+      border-color: #1e3a8a;
+    }
+
+    .filter-section select:focus,
+    .filter-section input:focus {
+      outline: none;
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+    }
+
+    .reset-button {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .reset-button:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
+
+    .reset-button:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2" alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="adminNav" class="space-y-2">
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="manage-user">👥 إدارة المستخدمين</span>
+            </a>
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="statistics">📈 الإحصائيات</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="dashboardTitle">عرض المستخدمين</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى عرض المستخدمين -->
+      <div id="adminContent">
+        <!-- فلتر البحث -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">فلتر البحث</h2>
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <select id="searchColumn" class="p-2 border rounded" onchange="updateSearchSuggestions()">
+              <option value="username">اسم المستخدم</option>
+              <option value="email">البريد الإلكتروني</option>
+              <option value="roleName">الدور</option>
+            </select>
+            <input id="searchText" class="p-2 border rounded" list="searchSuggestions" placeholder="ابحث هنا..." oninput="filterUsers()">
+            <datalist id="searchSuggestions"></datalist>
+            <button onclick="resetSearch()" class="reset-button">إعادة تعيين</button>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">قائمة المستخدمين</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">اسم المستخدم</th>
+                  <th class="p-3 text-gray-700">البريد الإلكتروني</th>
+                  <th class="p-3 text-gray-700">الدور</th>
+                </tr>
+              </thead>
+              <tbody id="usersList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    let allUsers = [];
+
+    async function fetchUserData() {
+      try {
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        setupDashboard(response.data);
+      } catch (error) {
+        handleAuthError(error);
+      }
+    }
+
+    async function fetchUsers() {
+      try {
+        const response = await axios.get('http://localhost:3000/users/', {
+          headers: { Authorization: `${token}` }
+        });
+        allUsers = response.data;
+        updateSearchSuggestions();
+        filterUsers();
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'فشل في جلب قائمة المستخدمين',
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      if (user.role !== 'super admin') {
+        Swal.fire({
+          icon: 'error',
+          title: 'غير مصرح',
+          text: 'هذه الصفحة للمشرفين فقط',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+        return;
+      }
+      fetchUsers();
+    }
+
+    function updateSearchSuggestions() {
+      const searchColumn = document.getElementById('searchColumn').value;
+      const datalist = document.getElementById('searchSuggestions');
+      let suggestions = [];
+
+      if (searchColumn === 'username') {
+        suggestions = [...new Set(allUsers.map(user => user.username))];
+      } else if (searchColumn === 'email') {
+        suggestions = [...new Set(allUsers.map(user => user.email))];
+      } else if (searchColumn === 'roleName') {
+        suggestions = [...new Set(allUsers.map(user => user.roleName))];
+      }
+
+      datalist.innerHTML = suggestions.map(suggestion => `
+        <option value="${suggestion}">
+      `).join('');
+    }
+
+    function filterUsers() {
+      const searchColumn = document.getElementById('searchColumn').value;
+      const searchText = document.getElementById('searchText').value.toLowerCase();
+
+      const filtered = allUsers.filter(user => {
+        let matchesSearch = true;
+        if (searchText) {
+          if (searchColumn === 'username') {
+            matchesSearch = user.username.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'email') {
+            matchesSearch = user.email.toLowerCase().includes(searchText);
+          } else if (searchColumn === 'roleName') {
+            matchesSearch = user.roleName.toLowerCase().includes(searchText);
+          }
+        }
+        return matchesSearch;
+      });
+
+      const html = filtered.map(user => `
+        <tr class="border-b hover:bg-gray-50 transition-all">
+          <td class="p-3 text-gray-700">${user.username}</td>
+          <td class="p-3 text-gray-700">${user.email}</td>
+          <td class="p-3 text-gray-700">${user.roleName}</td>
+        </tr>
+      `).join('');
+      document.getElementById('usersList').innerHTML = html;
+    }
+
+    function resetSearch() {
+      document.getElementById('searchText').value = '';
+      filterUsers();
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({
+          icon: 'error',
+          title: 'انتهت الجلسة',
+          text: 'يرجى تسجيل الدخول مرة أخرى',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => logout());
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'حدث خطأ في جلب البيانات',
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    document.getElementById("manage-user").addEventListener("click", () => {
+      window.location.href = "manager.html";
+    });
+
+    document.getElementById("statistics").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    fetchUserData();
+  </script>
+</body>
+</html>

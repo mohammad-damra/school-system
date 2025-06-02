@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة المستخدمين - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .box {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .box:hover {
+      background: #f3f4f6;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="adminNav" class="space-y-2">
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="manage-user">👥 إدارة المستخدمين</span>
+            </a>
+            <a href="#" class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span id="statistics">📈 الإحصائيات</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="dashboardTitle">إدارة المستخدمين</h1>
+          <p class="text-gray-600" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى إدارة المستخدمين -->
+      <div id="adminContent">
+        <div class="box" onclick="window.location.href='users.html'">
+          <h2 class="text-xl font-bold mb-2">عرض قائمة المستخدمين</h2>
+          <p class="text-gray-600">اضغط هنا لعرض قائمة المستخدمين.</p>
+        </div>
+
+        <!-- Box المعلمين -->
+        <div class="box" onclick="window.location.href='manageTeachers.html'">
+          <h2 class="text-xl font-bold mb-2">إدارة المعلمين</h2>
+          <p class="text-gray-600">اضغط هنا لإدارة قائمة المعلمين.</p>
+        </div>
+
+        <!-- Box الطلاب -->
+        <div class="box" onclick="window.location.href='manageStudents.html'">
+          <h2 class="text-xl font-bold mb-2">إدارة الطلاب</h2>
+          <p class="text-gray-600">اضغط هنا لإدارة قائمة الطلاب.</p>
+        </div>
+
+        <div class="box" onclick="window.location.href='manageSections.html'">
+          <h2 class="text-xl font-bold mb-2">إدارة الشعب</h2>
+          <p class="text-gray-600">اضغط هنا لإدارة قائمة الشعب.</p>
+        </div>
+
+        <div class="box" onclick="window.location.href='subjects.html'">
+          <h2 class="text-xl font-bold mb-2">إضافة المواد</h2>
+          <p class="text-gray-600">اضغط هنا لإضافة المواد.</p>
+        </div>
+        
+        <div class="box" onclick="window.location.href='subjectSections.html'">
+          <h2 class="text-xl font-bold mb-2">ربط المواد بالشعب</h2>
+          <p class="text-gray-600">اضغط هنا لربط المواد بالشعب.</p>
+        </div>
+
+        <div class="box" onclick="window.location.href='teacherSections.html'">
+          <h2 class="text-xl font-bold mb-2">ربط المعلمين بالشعب والمواد</h2>
+          <p class="text-gray-600">اضغط هنا لربط المعلمين بالشعب والمواد.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    async function fetchUserData() {
+      try {
+        const response = await axios.get('http://localhost:3000/dashboard', {
+          headers: { Authorization: `${token}` }
+        });
+        setupDashboard(response.data);
+      } catch (error) {
+        handleAuthError(error);
+      }
+    }
+
+    function setupDashboard(user) {
+      document.getElementById('welcomeMessage').textContent = `مرحباً ${user.name}!`;
+      if (user.role !== 'super admin') {
+        Swal.fire({ icon: 'error', title: 'غير مصرح', text: 'هذه الصفحة للمشرفين فقط' }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+        return;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      if (error.response?.status === 401) {
+        Swal.fire({ icon: 'error', title: 'انتهت الجلسة', text: 'يرجى تسجيل الدخول مرة أخرى' }).then(() => logout());
+      } else {
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'حدث خطأ في جلب البيانات' });
+      }
+    }
+
+    document.getElementById("manage-user").addEventListener("click", () => {
+      window.location.href = "manager.html";
+    });
+
+    document.getElementById("statistics").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    fetchUserData();
+  </script>
+</body>
+
+</html>

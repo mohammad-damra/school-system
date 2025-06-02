@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة العلامات - مدرستنا المرحة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.16/dist/sweetalert2.all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@700&display=swap');
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f4f8;
+    }
+
+    .sidebar {
+      background: linear-gradient(135deg, #1e3a8a, #374151);
+      min-height: 100vh;
+      width: 250px;
+      transition: all 0.3s;
+    }
+
+    .filter-section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f9fafb;
+      font-size: 0.9rem;
+      color: #374151;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-section input:hover {
+      border-color: #1e3a8a;
+    }
+
+    .filter-section input:focus {
+      outline: none;
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+    }
+
+    table tbody tr {
+      transition: background-color 0.2s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar fixed top-0 right-0">
+      <div class="p-4">
+        <div class="text-center mb-8">
+          <img src="https://img.icons8.com/color/96/000000/open-book.png" class="w-16 mx-auto mb-2"
+            alt="شعار المدرسة" />
+          <h2 class="text-white font-bold text-xl">مدرستنا المرحة</h2>
+        </div>
+        <nav>
+          <div id="teacherNav" class="space-y-2">
+            <a href="dashboard.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📊</span> لوحة المعلم
+            </a>
+            <a href="grade-teacher.html"
+              class="px-4 py-3 text-white bg-blue-700 flex items-center gap-2 transition-all">
+              <span>📝</span> العلامات
+            </a>
+            <a href="teacherAssignments.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📚</span> الواجبات
+            </a>
+            <a href="teacherAttendance.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>📅</span> الحضور والغياب
+            </a>
+            <a href="teacherProfile.html"
+              class="px-4 py-3 text-white hover:bg-blue-800 flex items-center gap-2 transition-all">
+              <span>👤</span> ملف المعلم
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 mr-[250px] p-8">
+      <header class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">إدارة العلامات</h1>
+          <p class="text-gray-600 p-4" id="welcomeMessage">مرحباً بك!</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+          تسجيل الخروج
+        </button>
+      </header>
+
+      <!-- محتوى العلامات -->
+      <div id="teacherGradesContent">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">الشعب المرتبطة</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">اسم الشعبة</th>
+                  <th class="p-3 text-gray-700">اسم الصف</th>
+                  <th class="p-3 text-gray-700">الفصل</th>
+                  <th class="p-3 text-gray-700">السنة</th>
+                </tr>
+              </thead>
+              <tbody id="sectionsList"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="subjectsSection" class="hidden bg-white p-6 rounded-xl shadow-lg mb-8 filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800" id="subjectsTitle">المواد</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="subjectsList"></div>
+        </div>
+        <div id="studentsSection" class="hidden bg-white p-6 rounded-xl shadow-lg filter-section">
+          <h2 class="text-xl font-bold mb-4 text-gray-800" id="studentsTitle">الطلاب</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 text-gray-700">اسم الطالب</th>
+                  <th class="p-3 text-gray-700">التقويم الأول</th>
+                  <th class="p-3 text-gray-700">التقويم الثاني</th>
+                  <th class="p-3 text-gray-700">التقويم الثالث</th>
+                  <th class="p-3 text-gray-700">التقويم النهائي</th>
+                  <th class="p-3 text-gray-700">المجموع</th>
+                  <th class="p-3 text-gray-700">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="studentsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('لا يوجد توكن في localStorage');
+      window.location.href = 'login.html';
+    } else {
+      console.log('Token:', token);
+    }
+
+    let allSections = [];
+    let allClasses = [];
+    let allSemesters = [];
+    let allAcademicYears = [];
+    let allSubjects = [];
+    let teacherSubjectSections = [];
+    const terms = ['التقويم الأول', 'التقويم الثاني', 'التقويم الثالث', 'التقويم النهائي'];
+    let editingRow = null;
+    let originalGrades = {};
+
+    async function fetchTeacherData() {
+      try {
+        console.log('جاري جلب بيانات المعلم...');
+        const teacherResponse = await axios.get('http://localhost:3000/teacher/me', {
+          headers: { Authorization: `${token}` }
+        });
+        console.log('بيانات المعلم:', teacherResponse.data);
+
+        console.log('جاري جلب بيانات TeacherSubjectSections...');
+        const tssResponse = await axios.get('http://localhost:3000/teacherSubjectSections/mine/mine', {
+          headers: { Authorization: `${token}` }
+        });
+        console.log('بيانات TeacherSubjectSections:', tssResponse.data);
+
+        teacherSubjectSections = tssResponse.data;
+        setupTeacherGrades(teacherResponse.data);
+      } catch (error) {
+        console.error('خطأ في جلب بيانات المعلم:', error.response?.data || error.message);
+        handleAuthError(error);
+      }
+    }
+
+    async function fetchSections(sectionIds) {
+      try {
+        console.log('جاري جلب الشعب:', sectionIds);
+        const response = await axios.get('http://localhost:3000/sections', {
+          headers: { Authorization: `${token}` },
+          params: { sectionIds: sectionIds.join(',') }
+        });
+        allSections = response.data.filter(section => {
+          const sectionId = typeof section._id === 'object' ? section._id.toString() : section._id;
+          return sectionIds.includes(sectionId);
+        });
+        console.log('الشعب المسترجعة:', allSections);
+      } catch (error) {
+        console.error('فشل في جلب الشعب:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الشعب', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchClasses() {
+      try {
+        console.log('جاري جلب الصفوف...');
+        const response = await axios.get('http://localhost:3000/classes', {
+          headers: { Authorization: `${token}` }
+        });
+        allClasses = response.data;
+        console.log('الصفوف المسترجعة:', allClasses);
+      } catch (error) {
+        console.error('فشل في جلب الصفوف:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الصفوف', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSemesters() {
+      try {
+        console.log('جاري جلب الفصول...');
+        const response = await axios.get('http://localhost:3000/semesters', {
+          headers: { Authorization: `${token}` }
+        });
+        allSemesters = response.data;
+        console.log('الفصول المسترجعة:', allSemesters);
+      } catch (error) {
+        console.error('فشل في جلب الفصول:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة الفصول الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchAcademicYears() {
+      try {
+        console.log('جاري جلب السنوات الدراسية...');
+        const response = await axios.get('http://localhost:3000/academicYears', {
+          headers: { Authorization: `${token}` }
+        });
+        allAcademicYears = response.data;
+        console.log('السنوات الدراسية المسترجعة:', allAcademicYears);
+      } catch (error) {
+        console.error('فشل في جلب السنوات الدراسية:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة السنوات الدراسية', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchSubjects() {
+      try {
+        console.log('جاري جلب المواد...');
+        const response = await axios.get('http://localhost:3000/subjects', {
+          headers: { Authorization: `${token}` }
+        });
+        allSubjects = response.data;
+        console.log('المواد المسترجعة:', allSubjects);
+      } catch (error) {
+        console.error('فشل في جلب المواد:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في جلب قائمة المواد', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    async function fetchStudentsBySection(sectionId, subjectId) {
+      try {
+        console.log(`جاري جلب الطلاب للشعبة ${sectionId} والمادة ${subjectId}...`);
+        const section = allSections.find(s => s._id === sectionId);
+        const sectionName = section ? section.name : 'غير معروف';
+        console.log(`اسم الشعبة: ${sectionName} (ID: ${sectionId})`);
+
+        const studentsResponse = await axios.get(`http://localhost:3000/students?sectionId=${sectionId}`, {
+          headers: { Authorization: `${token}` }
+        });
+        console.log(`الطلاب المسترجعون للشعبة ${sectionName} (${sectionId}):`, studentsResponse.data);
+
+        // التحقق من أن الطلاب مرتبطون بالشعبة الصحيحة
+        const filteredStudents = studentsResponse.data.filter(student => {
+          const studentSectionId = student.sectionId?._id || student.sectionId;
+          return studentSectionId.toString() === sectionId.toString();
+        });
+        console.log(`الطلاب المصفون للشعبة ${sectionName} (${sectionId}):`, filteredStudents);
+
+        const gradesResponse = await axios.get(`http://localhost:3000/grades?sectionId=${sectionId}&subjectId=${subjectId}`, {
+          headers: { Authorization: `${token}` }
+        });
+        console.log(`العلامات المسترجعة للشعبة ${sectionName} (${sectionId}) والمادة ${subjectId}:`, gradesResponse.data);
+
+        const filteredGrades = gradesResponse.data.filter(grade =>
+          grade.sectionId.toString() === sectionId &&
+          grade.subjectId.toString() === subjectId
+        );
+
+        return { students: filteredStudents, grades: filteredGrades };
+      } catch (error) {
+        console.error(`فشل في جلب بيانات الطلاب للشعبة ${sectionId}:`, error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'حدث خطأ في جلب بيانات الطلاب', confirmButtonColor: '#1e3a8a' });
+        return { students: [], grades: [] };
+      }
+    }
+
+    function getMaxGrade(sectionId, term) {
+      const section = allSections.find(s => s._id === sectionId);
+      if (!section) {
+        console.error(`الشعبة ${sectionId} غير موجودة في allSections`);
+        return 25; // قيمة افتراضية آمنة
+      }
+      const classObj = allClasses.find(c => c._id === (section.classId?._id || section.classId));
+      if (!classObj) {
+        console.error(`الصف للشعبة ${sectionId} غير موجود في allClasses`);
+        return 25; // قيمة افتراضية آمنة
+      }
+      const className = classObj.name || '';
+      console.log(`الصف للشعبة ${sectionId}: ${className}, التقويم: ${term}`);
+
+      if (['الأول', 'الثاني', 'الثالث'].includes(className)) {
+        console.log(`الحد الأقصى للصف ${className} هو 25`);
+        return 25;
+      } else if (['الرابع', 'الخامس', 'السادس'].includes(className)) {
+        const max = term === 'التقويم النهائي' ? 40 : 20;
+        console.log(`الحد الأقصى للصف ${className} والتقويم ${term} هو ${max}`);
+        return max;
+      }
+      console.warn(`الصف ${className} غير معروف، يتم استخدام الحد الأقصى الافتراضي 25`);
+      return 25; // قيمة افتراضية آمنة
+    }
+
+    function calculateTotal(grades, studentId) {
+      return terms.reduce((sum, term) => {
+        const key = `${studentId}-${term}`;
+        const grade = parseFloat(grades[key]?.grade || 0);
+        return sum + (isNaN(grade) ? 0 : grade);
+      }, 0);
+    }
+
+    function setupTeacherGrades(teacher) {
+      const welcomeElement = document.getElementById('welcomeMessage');
+      if (welcomeElement) {
+        welcomeElement.textContent = `مرحباً ${teacher.name}!`;
+      } else {
+        console.error('عنصر welcomeMessage غير موجود في الـ DOM');
+      }
+
+      // استخراج sectionIds مع التحقق من نوع sectionId
+      const sectionIds = [...new Set(
+        teacherSubjectSections.map(tss => {
+          return typeof tss.sectionId === 'object' ? tss.sectionId._id : tss.sectionId;
+        })
+      )];
+
+      console.log('معرفات الشعب المستخرجة:', sectionIds);
+      if (sectionIds.length === 0) {
+        console.warn('لا توجد شعب مرتبطة بالمعلم في TeacherSubjectSections');
+        Swal.fire({ icon: 'warning', title: 'تحذير', text: 'لا توجد شعب مرتبطة بك', confirmButtonColor: '#1e3a8a' });
+        const sectionsList = document.getElementById('sectionsList');
+        if (sectionsList) {
+          sectionsList.innerHTML = `
+            <tr>
+              <td colspan="4" class="p-3 text-center text-gray-700">لا توجد شعب مرتبطة بك</td>
+            </tr>
+          `;
+        }
+        return;
+      }
+      loadSections(sectionIds);
+    }
+
+    async function loadSections(sectionIds) {
+      try {
+        console.log('جاري تحميل الشعب مع المعرفات:', sectionIds);
+        await Promise.all([
+          fetchSections(sectionIds),
+          fetchClasses(),
+          fetchSemesters(),
+          fetchAcademicYears(),
+          fetchSubjects()
+        ]);
+
+        const filteredSections = allSections.filter(section => {
+          const sectionIdStr = section._id.toString(); // تأكد أنه string
+
+          return teacherSubjectSections.some(tss => {
+            const tssSectionId = typeof tss.sectionId === 'object' && tss.sectionId !== null
+              ? tss.sectionId._id?.toString()
+              : tss.sectionId?.toString();
+            return tssSectionId === sectionIdStr;
+          });
+        });
+
+        const sectionsList = document.getElementById('sectionsList');
+        if (!sectionsList) {
+          console.error('عنصر sectionsList غير موجود في الـ DOM');
+          return;
+        }
+
+        if (filteredSections.length === 0) {
+          console.warn('لا توجد شعب متاحة للعرض');
+          sectionsList.innerHTML = `
+            <tr>
+              <td colspan="4" class="p-3 text-center text-gray-700">لا توجد شعب متاحة (تحقق من معرفات الشعب)</td>
+            </tr>
+          `;
+          return;
+        }
+
+        const html = filteredSections.map(section => {
+          const className = allClasses.find(c => c._id === (section.classId?._id || section.classId))?.name || '--';
+          const semesterName = allSemesters.find(s => s._id === (section.semesterId?._id || section.semesterId))?.name || '--';
+          const academicYearName = allAcademicYears.find(ay => ay._id === (section.academicYearId?._id || section.academicYearId))?.year || '--';
+          return `
+    <tr class="border-b cursor-pointer hover:bg-gray-100" 
+        onclick="loadSubjects('${section._id}', '${section.name}')">
+      <td class="p-3 text-gray-700">${section.name}</td>
+      <td class="p-3 text-gray-700">${className}</td>
+      <td class="p-3 text-gray-700">${semesterName}</td>
+      <td class="p-3 text-gray-700">${academicYearName}</td>
+    </tr>
+  `;
+        }).join('');
+        sectionsList.innerHTML = html;
+        console.log('تم تحميل الشعب بنجاح');
+      } catch (error) {
+        console.error('فشل في جلب الشعب:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'حدث خطأ في جلب الشعب', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    function loadSubjects(sectionId, sectionName) {
+      const section = allSections.find(s => s._id === sectionId);
+      if (!section) {
+        console.error('الشعبة غير موجودة:', sectionId);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'الشعبة غير موجودة', confirmButtonColor: '#1e3a8a' });
+        return;
+      }
+
+      const filteredSubjectIds = teacherSubjectSections
+        .filter(tss => {
+          const secId = typeof tss.sectionId === 'object' ? tss.sectionId._id : tss.sectionId;
+          return secId === sectionId;
+        })
+        .map(tss => typeof tss.subjectId === 'object' ? tss.subjectId._id : tss.subjectId);
+      console.log('معرفات المواد المصنفة للشعبة:', sectionId, filteredSubjectIds);
+      const filteredSubjects = allSubjects.filter(sub => filteredSubjectIds.includes(sub._id.toString()));
+
+      if (filteredSubjects.length === 0) {
+        console.warn('لا توجد مواد مرتبطة بالشعبة:', sectionId);
+        Swal.fire({ icon: 'warning', title: 'تحذير', text: 'لا توجد مواد مرتبطة بهذه الشعبة', confirmButtonColor: '#1e3a8a' });
+        document.getElementẤnd('subjectsSection').classList.add('hidden');
+        return;
+      }
+
+      const subjectsTitle = document.getElementById('subjectsTitle');
+      if (subjectsTitle) {
+        subjectsTitle.textContent = `المواد - ${sectionName}`;
+      } else {
+        console.error('عنصر subjectsTitle غير موجود في الـ DOM');
+      }
+
+      const subjectsSection = document.getElementById('subjectsSection');
+      const studentsSection = document.getElementById('studentsSection');
+      if (subjectsSection && studentsSection) {
+        subjectsSection.classList.remove('hidden');
+        studentsSection.classList.add('hidden');
+      } else {
+        console.error('عنصر subjectsSection أو studentsSection غير موجود');
+      }
+
+      const subjectsList = document.getElementById('subjectsList');
+      if (subjectsList) {
+        const html = filteredSubjects.map(subject => `
+          <div class="bg-gray-100 p-4 rounded-lg cursor-pointer hover:bg-gray-200 transition-all" 
+               onclick="loadStudents('${sectionId}', '${sectionName}', '${subject._id}', '${subject.name}')">
+            <h3 class="font-semibold">${subject.name}</h3>
+          </div>
+        `).join('');
+        subjectsList.innerHTML = html;
+        console.log('تم تحميل المواد:', filteredSubjects);
+      } else {
+        console.error('عنصر subjectsList غير موجود في الـ DOM');
+      }
+    }
+
+    async function loadStudents(sectionId, sectionName, subjectId, subjectName) {
+      console.log(`تحميل الطلاب للشعبة: ${sectionId} (${sectionName}), المادة: ${subjectId} (${subjectName})`);
+      const studentsTitle = document.getElementById('studentsTitle');
+      if (studentsTitle) {
+        studentsTitle.textContent = `الطلاب - الشعبة ${sectionName} - ${subjectName}`;
+      } else {
+        console.error('عنصر studentsTitle غير موجود في الـ DOM');
+      }
+
+      const studentsSection = document.getElementById('studentsSection');
+      if (studentsSection) {
+        studentsSection.classList.remove('hidden');
+      } else {
+        console.error('عنصر studentsSection غير موجود في الـ DOM');
+      }
+
+      const { students, grades } = await fetchStudentsBySection(sectionId, subjectId);
+
+      if (!students.length) {
+        console.warn(`لا توجد طلاب في الشعبة ${sectionName} (${sectionId})`);
+        Swal.fire({
+          icon: 'warning',
+          title: 'لا توجد طلاب',
+          text: `لم يتم العثور على طلاب في الشعبة ${sectionName}`,
+          confirmButtonColor: '#1e3a8a'
+        });
+        const studentsList = document.getElementById('studentsList');
+        if (studentsList) {
+          studentsList.innerHTML = `
+            <tr>
+              <td colspan="7" class="p-3 text-center text-gray-700">لا توجد طلاب في هذه الشعبة</td>
+            </tr>
+          `;
+        }
+        return;
+      }
+
+      renderStudents(students, sectionId, subjectId, grades, sectionName, subjectName);
+    }
+
+    async function renderStudents(students, sectionId, subjectId, grades, sectionName, subjectName) {
+      const studentsList = document.getElementById('studentsList');
+      if (!studentsList) {
+        console.error('عنصر studentsList غير موجود في الـ DOM');
+        return;
+      }
+
+      console.log(`عرض الطلاب للشعبة ${sectionName} (${sectionId}):`, students);
+
+      let html = '';
+      const gradeMap = grades.reduce((map, grade) => {
+        if (grade.subjectId.toString() === subjectId) {
+          map[`${grade.studentId}-${grade.term}`] = grade;
+        }
+        return map;
+      }, {});
+
+      for (const student of students) {
+        let row = `<tr class="border-b" id="row-${student._id}">`;
+        row += `<td class="p-3 text-gray-700">${student.name}</td>`;
+
+        const gradeInputs = {};
+        for (const term of terms) {
+          const key = `${student._id}-${term}`;
+          const grade = gradeMap[key] || { grade: '', _id: '' };
+          const gradeValue = grade.grade || '';
+          const gradeId = grade._id || '';
+          const inputId = `grade-${student._id}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+          const maxGrade = getMaxGrade(sectionId, term);
+          gradeInputs[term] = { inputId, gradeId, originalValue: gradeValue, sectionId, subjectId, maxGrade };
+          row += `
+            <td class="p-3 text-gray-700">
+              <input type="number" min="0" max="${maxGrade}" value="${gradeValue}" 
+                     class="w-20 p-1 border rounded-lg" 
+                     id="${inputId}" disabled>
+            </td>
+          `;
+        }
+
+        const total = calculateTotal(gradeMap, student._id);
+        row += `
+          <td class="p-3 text-gray-700">
+            <input type="number" value="${total}" class="w-20 p-1 border rounded-lg bg-gray-100" 
+                   id="total-${student._id}-${sectionId}-${subjectId}" readonly>
+          </td>`;
+
+        row += `
+          <td class="p-3">
+            <div id="actions-${student._id}">
+              <button onclick="enableEditing('${student._id}', '${sectionId}', '${subjectId}', '${sectionName}', '${subjectName}')"
+                      class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">
+                تعديل
+              </button>
+            </div>
+          </td>`;
+        row += `</tr>`;
+        html += row;
+      }
+
+      studentsList.innerHTML = html;
+    }
+
+    async function enableEditing(studentId, sectionId, subjectId, sectionName, subjectName) {
+      console.log(`تم النقر على تعديل للطالب ${studentId}`);
+      if (editingRow && editingRow !== studentId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'تحذير',
+          text: 'يرجى إكمال تحرير السطر الحالي أولاً',
+          confirmButtonColor: '#1e3a8a'
+        });
+        return;
+      }
+
+      editingRow = studentId;
+      originalGrades[studentId] = {};
+
+      const { students, grades } = await fetchStudentsBySection(sectionId, subjectId);
+      const student = students.find(s => s._id === studentId);
+      if (!student) {
+        console.error(`الطالب ${studentId} غير موجود`);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'الطالب غير موجود', confirmButtonColor: '#1e3a8a' });
+        editingRow = null;
+        return;
+      }
+
+      const gradeMap = grades.reduce((map, grade) => {
+        if (grade.subjectId.toString() === subjectId) {
+          map[`${grade.studentId}-${grade.term}`] = grade;
+        }
+        return map;
+      }, {});
+
+      for (const term of terms) {
+        const key = `${studentId}-${term}`;
+        const grade = gradeMap[key] || { grade: '', _id: '' };
+        const gradeValue = grade.grade || '';
+        const inputId = `grade-${studentId}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+        const maxGrade = getMaxGrade(sectionId, term);
+        const input = document.getElementById(inputId);
+        if (input) {
+          originalGrades[studentId][term] = input.value;
+          input.disabled = false;
+          input.setAttribute('max', maxGrade);
+          input.addEventListener('input', () => updateTotal(studentId, sectionId, subjectId));
+        } else {
+          console.error(`حقل الإدخال ${inputId} غير موجود`);
+        }
+      }
+
+      const actionsDiv = document.getElementById(`actions-${studentId}`);
+      if (actionsDiv) {
+        actionsDiv.innerHTML = `
+          <button onclick="saveRowGrades('${studentId}', '${sectionId}', '${subjectId}')"
+                  class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 mr-2">
+            حفظ
+          </button>
+          <button onclick="cancelEditing('${studentId}', '${sectionId}', '${subjectId}')"
+                  class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">
+            إلغاء
+          </button>
+        `;
+        console.log(`تم تحديث الأزرار للطالب ${studentId}`);
+      } else {
+        console.error(`عنصر actions-${studentId} غير موجود`);
+      }
+    }
+
+    function updateTotal(studentId, sectionId, subjectId) {
+      let total = 0;
+      terms.forEach(term => {
+        const inputId = `grade-${studentId}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+        const input = document.getElementById(inputId);
+        if (input) {
+          const value = parseFloat(input.value) || 0;
+          total += value;
+        }
+      });
+      const totalInput = document.getElementById(`total-${studentId}-${sectionId}-${subjectId}`);
+      if (totalInput) {
+        totalInput.value = total;
+      }
+    }
+
+    async function saveRowGrades(studentId, sectionId, subjectId) {
+      console.log(`حفظ العلامات للطالب ${studentId}, الشعبة ${sectionId}, المادة ${subjectId}`);
+      try {
+        if (!/^[0-9a-fA-F]{24}$/.test(studentId) ||
+          !/^[0-9a-fA-F]{24}$/.test(sectionId) ||
+          !/^[0-9a-fA-F]{24}$/.test(subjectId)) {
+          throw new Error('معرف غير صالح: studentId, sectionId, أو subjectId');
+        }
+
+        const { grades } = await fetchStudentsBySection(sectionId, subjectId);
+        const gradeMap = grades.reduce((map, grade) => {
+          if (grade.subjectId.toString() === subjectId) {
+            map[`${grade.studentId}-${grade.term}`] = grade;
+          }
+          return map;
+        }, {});
+
+        for (const term of terms) {
+          const inputId = `grade-${studentId}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+          const input = document.getElementById(inputId);
+          if (!input) {
+            console.error(`حقل الإدخال ${inputId} غير موجود`);
+            continue;
+          }
+          const grade = parseFloat(input.value);
+          const maxGrade = getMaxGrade(sectionId, term);
+
+          if (!isNaN(grade) && (grade < 0 || grade > maxGrade)) {
+            Swal.fire({ icon: 'error', title: 'خطأ', text: `علامة ${term} غير صحيحة، يجب أن تكون بين 0 و${maxGrade}`, confirmButtonColor: '#1e3a8a' });
+            return;
+          }
+
+          const key = `${studentId}-${term}`;
+          const existingGrade = gradeMap[key] || { _id: '' };
+
+          if (!isNaN(grade) && grade !== '') {
+            if (existingGrade._id) {
+              await axios.put(`http://localhost:3000/grades/update/${existingGrade._id}`, {
+                grade: parseInt(grade)
+              }, { headers: { Authorization: `${token}` } });
+              console.log(`تم تحديث العلامة: gradeId=${existingGrade._id}, grade=${grade}`);
+            } else {
+              const teacherResponse = await axios.get('http://localhost:3000/teacher/me', { headers: { Authorization: `${token}` } });
+              const response = await axios.post('http://localhost:3000/grades/create', {
+                studentId,
+                sectionId,
+                subjectId,
+                term,
+                grade: parseInt(grade),
+                teacherId: teacherResponse.data._id
+              }, { headers: { Authorization: `${token}` } });
+              console.log(`تم إنشاء علامة جديدة: studentId=${studentId}, term=${term}, grade=${grade}`);
+            }
+          }
+        }
+
+        disableEditing(studentId, sectionId, subjectId);
+        Swal.fire({ icon: 'success', title: 'تم', text: 'تم حفظ العلامات بنجاح', confirmButtonColor: '#1e3a8a' });
+        const section = allSections.find(s => s._id === sectionId);
+        const subject = allSubjects.find(s => s._id === subjectId);
+        if (section && subject) {
+          loadStudents(sectionId, section.name, subjectId, subject.name);
+        } else {
+          console.error('الشعبة أو المادة غير موجودة');
+          Swal.fire({ icon: 'error', title: 'خطأ', text: 'فشل في تحميل بيانات الشعبة أو المادة', confirmButtonColor: '#1e3a8a' });
+        }
+      } catch (error) {
+        console.error('فشل في حفظ العلامات:', error.response?.data || error.message);
+        Swal.fire({ icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء حفظ العلامات', confirmButtonColor: '#1e3a8a' });
+      }
+    }
+
+    function cancelEditing(studentId, sectionId, subjectId) {
+      console.log(`إلغاء التعديل للطالب ${studentId}`);
+      for (const term of terms) {
+        const inputId = `grade-${studentId}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+        const input = document.getElementById(inputId);
+        if (input && originalGrades[studentId] && originalGrades[studentId][term]) {
+          input.value = originalGrades[studentId][term];
+          input.disabled = true;
+        } else {
+          console.error(`حقل الإدخال ${inputId} غير موجود أو لا توجد قيمة أصلية`);
+        }
+      }
+
+      updateTotal(studentId, sectionId, subjectId);
+
+      const actionsDiv = document.getElementById(`actions-${studentId}`);
+      if (actionsDiv) {
+        actionsDiv.innerHTML = `
+          <button onclick="enableEditing('${studentId}', '${sectionId}', '${subjectId}', '${allSections.find(s => s._id === sectionId)?.name || ''}', '${allSubjects.find(s => s._id === subjectId)?.name || ''}')"
+                  class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">
+            تعديل
+          </button>
+        `;
+        console.log(`تم استعادة زر التعديل للطالب ${studentId}`);
+      } else {
+        console.error(`عنصر actions-${studentId} غير موجود`);
+      }
+
+      editingRow = null;
+      delete originalGrades[studentId];
+    }
+
+    function disableEditing(studentId, sectionId, subjectId) {
+      console.log(`تعطيل التعديل للطالب ${studentId}`);
+      for (const term of terms) {
+        const inputId = `grade-${studentId}-${term.replace(/\s/g, '-')}-${sectionId}-${subjectId}`;
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.disabled = true;
+          const maxGrade = getMaxGrade(sectionId, term);
+          input.setAttribute('max', maxGrade);
+        } else {
+          console.error(`حقل الإدخال ${inputId} غير موجود`);
+        }
+      }
+
+      const actionsDiv = document.getElementById(`actions-${studentId}`);
+      if (actionsDiv) {
+        actionsDiv.innerHTML = `
+          <button onclick="enableEditing('${studentId}', '${sectionId}', '${subjectId}', '${allSections.find(s => s._id === sectionId)?.name || ''}', '${allSubjects.find(s => s._id === subjectId)?.name || ''}')"
+                  class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">
+            تعديل
+          </button>
+        `;
+      } else {
+        console.error(`عنصر actions-${studentId} غير موجود`);
+      }
+
+      editingRow = null;
+      delete originalGrades[studentId];
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    function handleAuthError(error) {
+      console.error('خطأ في التوثيق:', error.response?.data || error.message);
+      if (error.response?.status === 401) {
+        Swal.fire({
+          icon: 'error',
+          title: 'انتهت الجلسة',
+          text: 'يرجى تسجيل الدخول مرة أخرى',
+          confirmButtonColor: '#1e3a8a'
+        }).then(() => logout());
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: 'حدث خطأ في جلب البيانات: ' + (error.response?.data?.message || error.message),
+          confirmButtonColor: '#1e3a8a'
+        });
+      }
+    }
+
+    fetchTeacherData();
+  </script>
+</body>
+
+</html>
